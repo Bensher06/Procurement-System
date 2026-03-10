@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 
 const Layout = () => {
   const { isAuthenticated, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
     return (
@@ -24,26 +26,34 @@ const Layout = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Full-width header: logo + contact (same height as logo section) */}
-      <header className="fixed top-0 left-0 right-0 h-24 bg-red-950 border-b border-red-700/50 text-white flex items-center justify-between gap-4 pl-10 pr-6 z-20 shadow-md min-h-0">
-        <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
+      <header className="fixed top-0 left-0 right-0 h-24 bg-red-950 border-b border-red-700/50 text-white flex items-center justify-between gap-2 sm:gap-4 pl-4 pr-4 sm:pl-10 sm:pr-6 z-30 shadow-md min-h-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-2 -ml-1 rounded-lg text-white hover:bg-red-800 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-7 h-7" />
+          </button>
           <img
-            src="/Wmsu logo (4).png"
+            src="/wmsu1.jpg"
             alt="WMSU Logo"
-            className="w-16 h-16 object-contain flex-shrink-0"
+            className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover flex-shrink-0"
           />
           <div className="min-w-0">
-            <h1 className="font-sans font-bold text-2xl leading-tight text-white">Western Mindanao State University</h1>
-            <p className="text-base leading-tight text-red-200">Procurement System</p>
+            <h1 className="font-sans font-bold text-lg sm:text-2xl leading-tight text-white truncate">Western Mindanao State University</h1>
+            <p className="text-sm sm:text-base leading-tight text-red-200">WMSU-Procurement</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 sm:gap-6 text-sm flex-shrink-0 flex-wrap justify-end">
+        <div className="hidden sm:flex items-center gap-3 md:gap-6 text-xs sm:text-sm flex-shrink-0 flex-wrap justify-end">
           <span className="whitespace-nowrap">📞 991-1771</span>
           <span className="whitespace-nowrap">✉️ procurement@wmsu.edu.ph</span>
           <div className="text-xs text-red-200 whitespace-nowrap">ISO 9001-2015</div>
         </div>
       </header>
-      <Sidebar />
-      <main className="ml-64 pt-32 px-10 pb-12">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <main className="md:ml-64 pt-24 sm:pt-32 px-4 sm:px-6 md:px-10 pb-12">
         <Outlet />
       </main>
     </div>

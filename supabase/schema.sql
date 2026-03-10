@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   email TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'Faculty' CHECK (role IN ('Faculty', 'DeptHead', 'Admin')),
   department TEXT,
+  approved_budget NUMERIC(12, 2) DEFAULT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

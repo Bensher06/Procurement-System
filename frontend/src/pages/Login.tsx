@@ -59,13 +59,13 @@ const Login = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
             <img 
-              src="/Wmsu logo (4).png" 
+              src="/wmsu1.jpg" 
               alt="WMSU Logo" 
-              className="w-32 h-32 object-contain drop-shadow-lg"
+              className="w-32 h-32 rounded-full object-cover drop-shadow-lg"
             />
           </div>
           <h1 className="text-3xl font-bold text-black">Western Mindanao State University</h1>
-          <p className="text-black mt-2 font-semibold">Procurement System</p>
+          <p className="text-black mt-2 font-semibold">WMSU-Procurement</p>
           <p className="text-black mt-1 text-sm">A Smart Research University by 2040</p>
         </div>
 

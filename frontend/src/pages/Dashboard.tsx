@@ -10,8 +10,23 @@ import {
   FileText,
   ArrowRight,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  CircleDot
 } from 'lucide-react';
+
+const REQUEST_PROGRESS_STAGES: { key: string; label: string }[] = [
+  { key: 'Draft', label: 'Draft' },
+  { key: 'Pending', label: 'Pending' },
+  { key: 'Approved', label: 'Approved' },
+  { key: 'Ordered', label: 'Ordered' },
+  { key: 'Received', label: 'Received' },
+  { key: 'Completed', label: 'Completed' }
+];
+
+function getStatusStepIndex(status: string): number {
+  const i = REQUEST_PROGRESS_STAGES.findIndex(s => s.key === status);
+  return i >= 0 ? i : -1;
+}
 
 interface DashboardStats {
   budget: {
@@ -89,7 +104,7 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Budget Remaining */}
+        {/* Budget: for faculty = approved budget for them; for admin/dept = university budget */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
@@ -101,7 +116,9 @@ const Dashboard = () => {
               <AlertTriangle className="w-5 h-5 text-orange-500" />
             )}
           </div>
-          <p className="text-sm text-gray-500 mb-1">Budget Remaining</p>
+          <p className="text-sm text-gray-500 mb-1">
+            {canApprove() ? 'Budget Remaining' : 'Your approved budget'}
+          </p>
           <p className="text-2xl font-bold text-wmsu-black">
             ₱{stats?.budget?.remaining?.toLocaleString() || 0}
           </p>
@@ -174,11 +191,55 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Request progress (faculty: pipeline + per-request progress) */}
+      {!canApprove() && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-wmsu-black mb-4 flex items-center gap-2">
+            <CircleDot className="w-5 h-5 text-red-900" />
+            Your request progress
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Pipeline: Draft → Pending → Approved → Ordered → Received → Completed
+          </p>
+          <div className="flex flex-wrap items-end gap-2 sm:gap-0 sm:flex-nowrap sm:justify-between">
+            {REQUEST_PROGRESS_STAGES.map((stage, index) => {
+              const count = stats?.requestsByStatus?.[stage.key] || 0;
+              return (
+                <div key={stage.key} className="flex flex-col items-center flex-1 min-w-[4rem]">
+                  <div className="flex items-center gap-0.5 w-full justify-center">
+                    {index > 0 && (
+                      <div className="hidden sm:block flex-1 h-0.5 bg-gray-200 -mr-px max-w-[20px]" style={{ minWidth: 8 }} />
+                    )}
+                    <div className="flex flex-col items-center">
+                      <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-gray-600">{count}</span>
+                      </div>
+                      <span className="text-xs text-gray-600 mt-1 text-center leading-tight">{stage.label}</span>
+                    </div>
+                    {index < REQUEST_PROGRESS_STAGES.length - 1 && (
+                      <div className="hidden sm:block flex-1 h-0.5 bg-gray-200 -ml-px max-w-[20px]" style={{ minWidth: 8 }} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {(stats?.requestsByStatus?.Rejected ?? 0) > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
+              <StatusBadge status="Rejected" size="sm" />
+              <span className="text-sm text-gray-600">{stats?.requestsByStatus?.Rejected} rejected</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Request Status Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Status Overview */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-wmsu-black mb-4">Request Status Overview</h3>
+          <h3 className="text-lg font-semibold text-wmsu-black mb-4">
+            {canApprove() ? 'Request Status Overview' : 'Status breakdown'}
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             {Object.entries(stats?.requestsByStatus || {}).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -205,20 +266,43 @@ const Dashboard = () => {
           </div>
           <div className="space-y-3">
             {stats?.recentRequests?.length > 0 ? (
-              stats.recentRequests.map((request: any) => (
-                <div 
-                  key={request.id} 
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-wmsu-black truncate">{request.item_name}</p>
-                    <p className="text-sm text-gray-500">
-                      {request.category?.name} • ₱{request.total_price?.toLocaleString()}
-                    </p>
-                  </div>
-                  <StatusBadge status={request.status} size="sm" showIcon={false} />
-                </div>
-              ))
+              stats.recentRequests.map((request: any) => {
+                const stepIndex = getStatusStepIndex(request.status);
+                const totalSteps = REQUEST_PROGRESS_STAGES.length;
+                return (
+                  <Link
+                    key={request.id}
+                    to={`/requests/${request.id}`}
+                    className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-wmsu-black truncate">{request.item_name}</p>
+                        <p className="text-sm text-gray-500">
+                          {request.category?.name} • ₱{request.total_price?.toLocaleString()}
+                        </p>
+                        {!canApprove() && stepIndex >= 0 && (
+                          <div className="mt-2 flex items-center gap-1">
+                            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex">
+                              {REQUEST_PROGRESS_STAGES.map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`flex-1 ${i <= stepIndex ? 'bg-red-600' : 'bg-gray-200'}`}
+                                  style={{ minWidth: 4 }}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                              {stepIndex + 1}/{totalSteps} {request.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <StatusBadge status={request.status} size="sm" showIcon={false} />
+                    </div>
+                  </Link>
+                );
+              })
             ) : (
               <p className="text-center text-gray-400 py-4">No recent requests</p>
             )}

@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { categoriesAPI, vendorsAPI, requestsAPI, budgetsAPI } from '../lib/supabaseApi';
-import type { Category, Vendor, Budget, RequestStatus } from '../types/database';
+import { requestsAPI, budgetsAPI } from '../lib/supabaseApi';
+import type { Budget, RequestStatus } from '../types/database';
 import { 
   Package, 
   FileText, 
   DollarSign, 
   Hash, 
-  Building2,
-  FolderOpen,
   Loader2,
   AlertTriangle,
   Save,
@@ -18,15 +16,11 @@ import {
 const NewRequest = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [error, setError] = useState('');
   const [budgetWarning, setBudgetWarning] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    category_id: '',
-    vendor_id: '',
     item_name: '',
     description: '',
     quantity: 1,
@@ -39,13 +33,7 @@ const NewRequest = () => {
 
   const fetchData = async () => {
     try {
-      const [categoriesData, vendorsData, budgetData] = await Promise.all([
-        categoriesAPI.getAll(),
-        vendorsAPI.getAll(),
-        budgetsAPI.getCurrent()
-      ]);
-      setCategories(categoriesData);
-      setVendors(vendorsData);
+      const budgetData = await budgetsAPI.getCurrent();
       setBudget(budgetData);
     } catch (err: any) {
       setError(err.message || 'Failed to load form data');
@@ -76,15 +64,13 @@ const NewRequest = () => {
     setLoading(true);
 
     try {
-      if (!formData.category_id || !formData.item_name || !formData.quantity || !formData.unit_price) {
+      if (!formData.item_name || !formData.quantity || !formData.unit_price) {
         setError('Please fill in all required fields');
         setLoading(false);
         return;
       }
 
       await requestsAPI.create({
-        category_id: formData.category_id || undefined,
-        vendor_id: formData.vendor_id || undefined,
         item_name: formData.item_name,
         description: formData.description || undefined,
         quantity: parseInt(formData.quantity.toString()),
@@ -155,46 +141,6 @@ const NewRequest = () => {
             placeholder="e.g., Laptop Computer, Printer Paper"
             required
           />
-        </div>
-
-        {/* Category & Vendor */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <FolderOpen className="w-4 h-4 inline mr-2" />
-              Category *
-            </label>
-            <select
-              name="category_id"
-              value={formData.category_id}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
-              required
-            >
-              <option value="">Select a category</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Building2 className="w-4 h-4 inline mr-2" />
-              Vendor (Optional)
-            </label>
-            <select
-              name="vendor_id"
-              value={formData.vendor_id}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
-            >
-              <option value="">Select a vendor</option>
-              {vendors.map(vendor => (
-                <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* Quantity & Unit Price */}

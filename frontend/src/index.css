@@ -38,6 +38,11 @@
   --wmsu-text-black: #0a0a0a;
 }
 
+/* Responsive base font: scales between 14px and 16px with viewport */
+html {
+  font-size: clamp(14px, 0.875rem + 0.25vw, 16px);
+}
+
 /* Custom styles */
 body {
   font-family: 'Libra Sans', var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -45,9 +50,16 @@ body {
   color: var(--wmsu-text-black);
 }
 
-/* Page headers: ensure every page title (h1 in main) is bold */
+/* Page headers: responsive size and bold */
 main h1 {
   font-weight: 700;
+  font-size: clamp(1.375rem, 4vw + 1rem, 1.875rem);
+  line-height: 1.25;
+}
+
+/* Page subtitles (e.g. under h1): scale with viewport */
+main h1 + p {
+  font-size: clamp(0.8125rem, 0.5vw + 0.75rem, 1rem);
 }
 
 /* Custom scrollbar */
@@ -67,6 +79,22 @@ main h1 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--wmsu-red-dark);
+}
+
+/* Landing page: hide scrollbar until user scrolls */
+html.landing-scrollbar-hidden {
+  scrollbar-width: none;
+}
+html.landing-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+html.landing-scrollbar-hidden.scrollbar-visible {
+  scrollbar-width: thin;
+}
+html.landing-scrollbar-hidden.scrollbar-visible::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
 }
 
 /* Smooth transitions */

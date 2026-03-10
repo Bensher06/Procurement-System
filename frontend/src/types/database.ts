@@ -35,6 +35,7 @@ export interface Database {
           email: string;
           role: UserRole;
           department: string | null;
+          approved_budget: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -44,6 +45,7 @@ export interface Database {
           email: string;
           role?: UserRole;
           department?: string | null;
+          approved_budget?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -53,6 +55,7 @@ export interface Database {
           email?: string;
           role?: UserRole;
           department?: string | null;
+          approved_budget?: number | null;
           updated_at?: string;
         };
       };
@@ -309,5 +312,53 @@ export type CommentWithAuthor = RequestComment & {
 
 export type ActivityWithActor = RequestActivity & {
   actor?: Profile;
+};
+
+// Landing page (admin-editable content)
+export type LandingBiddingRow = {
+  projectTitle: string;
+  abc: string | number;
+  referenceNo: string;
+  closingDate: string;
+};
+export type LandingDocumentItem = {
+  title: string;
+  description: string;
+  url: string;
+  category: string;
+};
+export type LandingTransparency = {
+  mission: string;
+  ctaPrimary: { label: string; url: string; description?: string };
+  ctaSecondary: { label: string; url: string; description?: string };
+};
+export type LandingBidding = { rows: LandingBiddingRow[] };
+export type LandingDocuments = { items: LandingDocumentItem[] };
+export type LandingPlanning = {
+  app: { title: string; description: string; url: string };
+  pmr: { title: string; description: string; url: string };
+};
+export type LandingVendor = {
+  accreditationTitle: string;
+  accreditationDescription: string;
+  accreditationUrl: string;
+  loginTitle: string;
+  loginDescription: string;
+  loginUrl: string;
+};
+export type LandingBac = {
+  secretariatName: string;
+  secretariatEmail: string;
+  secretariatPhone: string;
+  officeAddress: string;
+  officeNote: string;
+};
+export type LandingContent = {
+  transparency?: LandingTransparency;
+  bidding?: LandingBidding;
+  documents?: LandingDocuments;
+  planning?: LandingPlanning;
+  vendor?: LandingVendor;
+  bac?: LandingBac;
 };
 
