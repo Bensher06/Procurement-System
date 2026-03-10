@@ -1,22 +1,27 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { requestsAPI } from '../lib/supabaseApi';
 import StatusBadge from '../components/StatusBadge';
 import type { RequestWithRelations } from '../types/database';
-import { Loader2, Eye, Calendar, Package } from 'lucide-react';
+import { Loader2, Eye, Calendar, Package, User } from 'lucide-react';
 
 const History = () => {
+  const { canApprove } = useAuth();
   const [requests, setRequests] = useState<RequestWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [canApprove]);
 
   const fetchHistory = async () => {
     try {
-      const data = await requestsAPI.getMyRequests();
+      // Admin/DeptHead: all users' requests. Faculty: only current user's own requests.
+      const data = canApprove()
+        ? await requestsAPI.getAll()
+        : await requestsAPI.getMyRequests();
       setRequests(data);
     } catch (err: any) {
       setError(err.message || 'Failed to load request history');
@@ -38,7 +43,11 @@ const History = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-wmsu-black">Request History</h1>
-        <p className="text-base text-gray-500 mt-1">View all your past procurement requests</p>
+        <p className="text-base text-gray-500 mt-1">
+          {canApprove()
+            ? 'History of requests submitted by users to admin'
+            : 'Your own request history only—other users\' requests are not shown.'}
+        </p>
       </div>
 
       {error && (
@@ -50,13 +59,17 @@ const History = () => {
       {requests.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
           <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 mb-4">No requests found</p>
-          <Link
-            to="/requests/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-900 text-white text-sm font-medium rounded-lg hover:bg-red-800 transition-colors"
-          >
-            Create your first request
-          </Link>
+          <p className="text-gray-500 mb-4">
+            {canApprove() ? 'No requests have been submitted by users yet.' : 'No requests found'}
+          </p>
+          {!canApprove() && (
+            <Link
+              to="/requests/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-900 text-white text-sm font-medium rounded-lg hover:bg-red-800 transition-colors"
+            >
+              Create your first request
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -67,9 +80,18 @@ const History = () => {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <h3 className="text-lg font-semibold text-wmsu-black">{request.item_name}</h3>
                     <StatusBadge status={request.status} size="sm" />
+                    {canApprove() && request.requester && (
+                      <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
+                        <User className="w-4 h-4 text-gray-500" />
+                        {request.requester.full_name}
+                        {request.requester.email && (
+                          <span className="text-gray-400 text-xs">({request.requester.email})</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">

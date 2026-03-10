@@ -9,7 +9,8 @@ import type {
   RequestWithRelations,
   RequestStatus,
   CommentWithAuthor,
-  ActivityWithActor
+  ActivityWithActor,
+  LandingContent
 } from '../types/database';
 
 // =====================================================
@@ -634,8 +635,34 @@ export const dashboardAPI = {
     const profile = await authAPI.getProfile();
     const isAdminOrDeptHead = profile?.role === 'Admin' || profile?.role === 'DeptHead';
 
-    // Get current budget
-    const budget = await budgetsAPI.getCurrent();
+    // Budget: for Faculty show their approved budget; for Admin/DeptHead show university budget
+    let budget: { total: number; spent: number; remaining: number; academicYear: string } | null = null;
+    if (isAdminOrDeptHead) {
+      const uniBudget = await budgetsAPI.getCurrent();
+      if (uniBudget) {
+        budget = {
+          total: uniBudget.total_amount,
+          spent: uniBudget.spent_amount,
+          remaining: uniBudget.remaining_amount,
+          academicYear: uniBudget.academic_year
+        };
+      }
+    } else {
+      // Faculty: use their approved_budget and their own spent (Ordered/Received/Completed requests)
+      const approvedTotal = Number(profile?.approved_budget) || 0;
+      const { data: spentRequests } = await supabase
+        .from('requests')
+        .select('total_price')
+        .eq('requester_id', user.id)
+        .in('status', ['Ordered', 'Received', 'Completed']);
+      const spent = spentRequests?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
+      budget = {
+        total: approvedTotal,
+        spent,
+        remaining: Math.max(0, approvedTotal - spent),
+        academicYear: 'Your allocation'
+      };
+    }
 
     // Get pending approvals count
     const { count: pendingApprovals } = await supabase
@@ -664,12 +691,15 @@ export const dashboardAPI = {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const { data: monthlyData } = await supabase
+    let monthlyQuery = supabase
       .from('requests')
       .select('total_price')
       .in('status', ['Ordered', 'Received', 'Completed'])
       .gte('ordered_at', startOfMonth.toISOString());
-
+    if (!isAdminOrDeptHead) {
+      monthlyQuery = monthlyQuery.eq('requester_id', user.id);
+    }
+    const { data: monthlyData } = await monthlyQuery;
     const monthlySpending = monthlyData?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
 
     // Get recent requests
@@ -701,18 +731,38 @@ export const dashboardAPI = {
     const { count: totalRequests } = await totalQuery;
 
     return {
-      budget: budget ? {
-        total: budget.total_amount,
-        spent: budget.spent_amount,
-        remaining: budget.remaining_amount,
-        academicYear: budget.academic_year
-      } : null,
+      budget,
       pendingApprovals: pendingApprovals || 0,
       totalRequests: totalRequests || 0,
       monthlySpending,
       requestsByStatus,
       recentRequests: recentRequests || []
     };
+  }
+};
+
+// =====================================================
+// LANDING PAGE API (public read; admin write)
+// =====================================================
+export const landingAPI = {
+  getAll: async (): Promise<LandingContent> => {
+    const { data, error } = await supabase
+      .from('landing_page')
+      .select('section, data')
+      .order('section');
+    if (error) throw error;
+    const out: LandingContent = {};
+    (data || []).forEach((row: { section: string; data: unknown }) => {
+      out[row.section as keyof LandingContent] = row.data as never;
+    });
+    return out;
+  },
+
+  updateSection: async (section: string, data: unknown): Promise<void> => {
+    const { error } = await supabase
+      .from('landing_page')
+      .upsert({ section, data, updated_at: new Date().toISOString() }, { onConflict: 'section' });
+    if (error) throw error;
   }
 };
 

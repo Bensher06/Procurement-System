@@ -29,7 +29,8 @@ const Users = () => {
     full_name: '',
     email: '',
     password: '',
-    role: 'Faculty' as UserRole
+    role: 'Faculty' as UserRole,
+    approved_budget: '' as string
   });
 
   useEffect(() => {
@@ -58,7 +59,8 @@ const Users = () => {
         // Update existing user
         await profilesAPI.update(editingUser.id, {
           full_name: formData.full_name,
-          role: formData.role
+          role: formData.role,
+          approved_budget: formData.approved_budget === '' ? null : parseFloat(formData.approved_budget)
         });
         setSuccess('User updated successfully');
       } else {
@@ -99,7 +101,8 @@ const Users = () => {
       full_name: user.full_name,
       email: user.email,
       password: '',
-      role: user.role
+      role: user.role,
+      approved_budget: user.approved_budget != null ? String(user.approved_budget) : ''
     });
     setShowModal(true);
   };
@@ -128,7 +131,7 @@ const Users = () => {
   };
 
   const resetForm = () => {
-    setFormData({ full_name: '', email: '', password: '', role: 'Faculty' });
+    setFormData({ full_name: '', email: '', password: '', role: 'Faculty', approved_budget: '' });
     setEditingUser(null);
   };
 
@@ -383,6 +386,26 @@ const Users = () => {
                   <option value="Admin">Admin</option>
                 </select>
               </div>
+
+              {editingUser && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Approved budget (₱) — for Faculty
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.approved_budget}
+                    onChange={(e) => setFormData(prev => ({ ...prev, approved_budget: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600"
+                    placeholder="e.g. 50000"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Amount shown to this user as &quot;Your approved budget&quot; on their dashboard. Leave empty if not set.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-4">
                 <button

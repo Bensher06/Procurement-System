@@ -152,18 +152,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         password
       });
 
-      if (error) {
-        console.error('❌ Signin error:', error);
-        console.dir(error, { depth: null });
-        throw error;
-      }
+      if (error) throw error;
 
       console.log('✅ Signin successful:', data.user?.email);
     } catch (err: any) {
-      console.error('❌ Signin exception:', err);
-      
+      // Only log unexpected errors (not invalid credentials)
+      const isInvalidCreds = err?.message === 'Invalid login credentials' || err?.name === 'AuthApiError';
+      if (!isInvalidCreds) console.error('❌ Signin error:', err);
+
       // Handle "Failed to fetch" specifically
-      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+      if (err?.message === 'Failed to fetch' || err?.name === 'TypeError') {
         throw new Error(
           'Unable to connect to authentication server. This usually means:\n' +
           '1. Your Supabase project may be paused (check your dashboard)\n' +

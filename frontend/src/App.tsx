@@ -1,14 +1,25 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
+import Landing from './pages/Landing';
+import RequestProgress from './pages/RequestProgress';
 import Dashboard from './pages/Dashboard';
+
+function RootRoute() {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Landing />;
+  if (isAdmin()) return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/request-progress" replace />;
+}
+
 import Requests from './pages/Requests';
 import NewRequest from './pages/NewRequest';
 import RequestDetail from './pages/RequestDetail';
 import History from './pages/History';
 import Approvals from './pages/Approvals';
+import ManageLanding from './pages/ManageLanding';
 import Users from './pages/Users';
 import Vendors from './pages/Vendors';
 import Budget from './pages/Budget';
@@ -20,26 +31,29 @@ function App() {
       <Router>
         <Routes>
           {/* Public Routes */}
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/landing" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<Setup />} />
           
           {/* Protected Routes */}
           <Route element={<Layout />}>
+            <Route path="/request-progress" element={<RequestProgress />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/requests" element={<Requests />} />
             <Route path="/requests/new" element={<NewRequest />} />
             <Route path="/requests/:id" element={<RequestDetail />} />
             <Route path="/history" element={<History />} />
             <Route path="/approvals" element={<Approvals />} />
+            <Route path="/manage-landing" element={<ManageLanding />} />
             <Route path="/users" element={<Users />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/budget" element={<Budget />} />
             <Route path="/budget/:budgetId/funds" element={<BudgetFundSources />} />
           </Route>
 
-          {/* Redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

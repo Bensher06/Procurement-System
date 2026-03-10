@@ -95,9 +95,9 @@ npm run dev`
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
             <img 
-              src="/Wmsu logo (4).png" 
+              src="/wmsu1.jpg" 
               alt="WMSU Logo" 
-              className="w-20 h-20 object-contain"
+              className="w-20 h-20 rounded-full object-cover"
             />
           </div>
           <h1 className="text-3xl font-bold text-wmsu-black">Supabase Setup Guide</h1>
