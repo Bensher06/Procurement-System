@@ -97,6 +97,16 @@ html.landing-scrollbar-hidden.scrollbar-visible::-webkit-scrollbar {
   height: 8px;
 }
 
+/* Hide number input spin buttons */
+.input-no-spinner::-webkit-inner-spin-button,
+.input-no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input-no-spinner {
+  -moz-appearance: textfield;
+}
+
 /* Smooth transitions */
 .transition-all {
   transition-property: all;

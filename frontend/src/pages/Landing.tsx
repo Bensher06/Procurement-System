@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react';
 import { landingAPI } from '../lib/supabaseApi';
 import type { LandingContent } from '../types/database';
 
+function formatClosingDate(s: string): string {
+  if (!s?.trim()) return s || '';
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  const day = d.getDate();
+  const month = d.toLocaleDateString('en-US', { month: 'short' });
+  const year = d.getFullYear();
+  return `${month} ${day}, ${year}`;
+}
+
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
   const [content, setContent] = useState<LandingContent | null>(null);
@@ -195,9 +205,9 @@ export default function Landing() {
                     {bidding.map((row, i) => (
                       <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                         <td className="py-3 px-4 text-gray-800">{row.projectTitle}</td>
-                        <td className="py-3 px-4">{typeof row.abc === 'number' ? row.abc.toLocaleString() : row.abc}</td>
+                        <td className="py-3 px-4">{typeof row.abc === 'number' ? row.abc.toLocaleString() : String(row.abc ?? '')}</td>
                         <td className="py-3 px-4 font-mono text-gray-600">{row.referenceNo}</td>
-                        <td className="py-3 px-4">{row.closingDate}</td>
+                        <td className="py-3 px-4">{formatClosingDate(row.closingDate)}</td>
                       </tr>
                     ))}
                   </tbody>

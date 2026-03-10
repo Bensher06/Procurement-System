@@ -311,10 +311,15 @@ function BiddingForm({
   onSave: (d: LandingBidding) => void;
   saving: boolean;
 }) {
-  const [rows, setRows] = useState<LandingBiddingRow[]>(data.rows || []);
+  const [rows, setRows] = useState<LandingBiddingRow[]>(
+    (data.rows || []).map((r) => ({
+      ...r,
+      abc: typeof r.abc === 'number' && !Number.isNaN(r.abc) ? r.abc : Math.floor(Number(r.abc)) || 0
+    }))
+  );
 
   const addRow = () => {
-    setRows((r) => [...r, { projectTitle: '', abc: '', referenceNo: '', closingDate: '' }]);
+    setRows((r) => [...r, { projectTitle: '', abc: 0, referenceNo: '', closingDate: '' }]);
   };
   const removeRow = (i: number) => {
     setRows((r) => r.filter((_, j) => j !== i));
@@ -342,12 +347,22 @@ function BiddingForm({
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-500 mb-0.5">ABC (₱)</label>
-            <input
-              value={row.abc}
-              onChange={(e) => updateRow(i, 'abc', e.target.value)}
-              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-            />
+            <label className="block text-xs font-medium text-gray-500 mb-0.5">ABC</label>
+            <div className="flex items-center border border-gray-300 rounded text-sm bg-white">
+              <span className="pl-2 py-1.5 text-gray-600 shrink-0">₱</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={typeof row.abc === 'number' && !Number.isNaN(row.abc) ? row.abc : ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const n = v === '' ? 0 : Math.floor(Number(v)) || 0;
+                  updateRow(i, 'abc', n);
+                }}
+                className="input-no-spinner w-full py-1.5 pr-2 border-0 rounded-r text-sm focus:ring-0 focus:outline-none"
+              />
+            </div>
           </div>
           <div className="col-span-2">
             <label className="block text-xs font-medium text-gray-500 mb-0.5">Reference No.</label>
@@ -360,10 +375,10 @@ function BiddingForm({
           <div className="col-span-2">
             <label className="block text-xs font-medium text-gray-500 mb-0.5">Closing Date</label>
             <input
-              value={row.closingDate}
+              type="date"
+              value={row.closingDate && /^\d{4}-\d{2}-\d{2}$/.test(row.closingDate) ? row.closingDate : ''}
               onChange={(e) => updateRow(i, 'closingDate', e.target.value)}
               className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-              placeholder="e.g. Mar 15, 2025"
             />
           </div>
           <div className="col-span-1">

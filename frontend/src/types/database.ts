@@ -317,7 +317,7 @@ export type ActivityWithActor = RequestActivity & {
 // Landing page (admin-editable content)
 export type LandingBiddingRow = {
   projectTitle: string;
-  abc: string | number;
+  abc: number;
   referenceNo: string;
   closingDate: string;
 };
