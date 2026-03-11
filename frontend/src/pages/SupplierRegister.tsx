@@ -289,8 +289,7 @@ const SupplierRegister = () => {
         tin_number: formData.tin_number || null,
         business_registration_no: formData.business_registration_no || null,
         business_type: formData.business_type || null,
-        project_attending: formData.project_attending?.trim() || null,
-        // portfolio_urls omitted until column exists in Supabase; see docs/supabase-suppliers-migration.md
+        // project_attending and portfolio_urls omitted until columns exist in Supabase; see docs/supabase-suppliers-migration.md
       };
 
       const { error: err } = await anonClient

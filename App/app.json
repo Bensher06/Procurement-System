@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyNewProject",
-    "slug": "MyNewProject",
+    "name": "WMSU Procurement",
+    "slug": "wmsu-procurement",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.wmsu.procurement",
       "adaptiveIcon": {
         "backgroundColor": "#8B0000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,6 +44,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3e183f07-e61f-4c61-9646-c7b046fad517"
+      }
     }
   }
 }
