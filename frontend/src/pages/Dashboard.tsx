@@ -190,12 +190,12 @@ const Dashboard = () => {
           </div>
           <p className="text-sm text-gray-500 mb-1">Total Requests</p>
           <p className="text-2xl font-bold text-wmsu-black">{stats?.totalRequests || 0}</p>
-          <Link 
-            to="/requests"
-className="mt-3 text-sm text-gray-700 hover:text-gray-900 inline-flex items-center gap-1"
-            >
-              View all <ArrowRight className="w-4 h-4" />
-            </Link>
+          <Link
+            to="/history"
+            className="mt-3 text-sm text-gray-700 hover:text-gray-900 inline-flex items-center gap-1"
+          >
+            View all <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
 
