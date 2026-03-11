@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { requestsAPI, budgetsAPI } from '../lib/supabaseApi';
 import type { Budget, RequestStatus } from '../types/database';
 import { 
@@ -13,13 +13,16 @@ import {
   Send
 } from 'lucide-react';
 
+const IN_PROGRESS_STATUSES: RequestStatus[] = ['Draft', 'Pending', 'Negotiating'];
+
 const NewRequest = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [error, setError] = useState('');
   const [budgetWarning, setBudgetWarning] = useState<string | null>(null);
-  
+  const [requestInProgress, setRequestInProgress] = useState<boolean | null>(null);
+
   const [formData, setFormData] = useState({
     item_name: '',
     description: '',
@@ -33,11 +36,17 @@ const NewRequest = () => {
 
   const fetchData = async () => {
     try {
-      const budgetData = await budgetsAPI.getCurrent();
+      const [budgetData, myRequests] = await Promise.all([
+        budgetsAPI.getCurrent(),
+        requestsAPI.getMyRequests()
+      ]);
       setBudget(budgetData);
+      const inProgress = myRequests.some((r) => IN_PROGRESS_STATUSES.includes(r.status));
+      setRequestInProgress(inProgress);
     } catch (err: any) {
       setError(err.message || 'Failed to load form data');
       console.error(err);
+      setRequestInProgress(false);
     }
   };
 
@@ -45,7 +54,7 @@ const NewRequest = () => {
 
   useEffect(() => {
     if (budget && totalPrice > budget.remaining_amount) {
-      setBudgetWarning(`This request (₱${totalPrice.toLocaleString()}) exceeds the remaining budget (₱${budget.remaining_amount.toLocaleString()})`);
+      setBudgetWarning('This request exceeds the available budget. It may not be approved.');
     } else {
       setBudgetWarning(null);
     }
@@ -64,6 +73,11 @@ const NewRequest = () => {
     setLoading(true);
 
     try {
+      if (requestInProgress) {
+        setError('You can only have one request at a time. Wait for your current request to be approved or rejected.');
+        setLoading(false);
+        return;
+      }
       if (!formData.item_name || !formData.quantity || !formData.unit_price) {
         setError('Please fill in all required fields');
         setLoading(false);
@@ -88,6 +102,42 @@ const NewRequest = () => {
     }
   };
 
+  if (requestInProgress === null) {
+    return (
+      <div className="max-w-3xl mx-auto flex items-center justify-center min-h-[200px]">
+        <Loader2 className="w-8 h-8 text-red-900 animate-spin" />
+      </div>
+    );
+  }
+
+  if (requestInProgress === true) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-wmsu-black">New Procurement Request</h1>
+          <p className="text-base text-gray-500 mt-1">Fill in the details for your procurement request</p>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-10 h-10 text-amber-600 shrink-0" />
+            <div>
+              <h2 className="text-lg font-semibold text-amber-900">One request at a time</h2>
+              <p className="text-amber-800 mt-1">
+                You already have a request in progress (Draft, Pending, or Negotiating). Wait for it to be approved or rejected before submitting another.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/requests"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium w-fit"
+          >
+            View my requests
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
@@ -95,23 +145,7 @@ const NewRequest = () => {
         <p className="text-base text-gray-500 mt-1">Fill in the details for your procurement request</p>
       </div>
 
-      {/* Budget Info */}
-      {budget && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-red-900 font-medium">Available Budget ({budget.academic_year})</p>
-              <p className="text-2xl font-bold text-red-800">₱{budget.remaining_amount.toLocaleString()}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-red-900">Request Total</p>
-              <p className="text-2xl font-bold text-red-800">₱{totalPrice.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Budget Warning */}
+      {/* Budget Warning (no amounts shown to faculty) */}
       {budgetWarning && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />

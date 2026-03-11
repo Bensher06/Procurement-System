@@ -415,7 +415,7 @@ function TransparencyForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">ABC (₱) — integer only</label>
             <div className="flex items-center border border-gray-300 rounded-lg bg-white">
               <span className="pl-3 py-2 text-gray-600">₱</span>
-              <input type="number" min={0} step={1} value={form.abc === 0 && form.projectTitle === '' ? '' : form.abc} onChange={(e) => update('abc', e.target.value === '' ? 0 : Math.floor(Number(e.target.value)) || 0)} className="input-no-spinner w-full py-2 pr-3 border-0 rounded-r-lg" placeholder="2500000" />
+              <input type="number" min={0} step={1} value={form.abc === 0 && form.projectTitle === '' ? '' : form.abc} onChange={(e) => { const v = e.target.value; const stripped = v === '' ? 0 : Math.floor(Number(String(v).replace(/^0+/, '') || '0')) || 0; update('abc', stripped); }} className="input-no-spinner w-full py-2 pr-3 border-0 rounded-r-lg" placeholder="2500000" />
             </div>
           </div>
           <div>
@@ -446,8 +446,8 @@ function TransparencyForm({
             <input type="email" value={form.contactEmail || ''} onChange={(e) => update('contactEmail', e.target.value)} className={inputClass} placeholder="procurement@wmsu.edu.ph" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
-            <input type="text" value={form.contactPhone || ''} onChange={(e) => update('contactPhone', e.target.value)} className={inputClass} placeholder="(062) 991-1020" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone (starts with 09, max 11 digits)</label>
+            <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={11} value={form.contactPhone || ''} onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, 11); const v = !d ? '' : d.startsWith('09') ? d : d.startsWith('9') ? ('09' + d.slice(1)).slice(0, 11) : ('09' + d).slice(0, 11); update('contactPhone', v); }} className={inputClass} placeholder="e.g. 09171234567" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
@@ -482,14 +482,14 @@ function TransparencyForm({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-gray-500 mb-0.5">Project Title</label><input type="text" value={editingDraft.featuredItem.projectTitle} onChange={(e) => updateDraft('projectTitle', e.target.value)} className={inputClassSm} /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Reference No.</label><input type="text" value={editingDraft.featuredItem.referenceNo} onChange={(e) => updateDraft('referenceNo', e.target.value)} className={inputClassSm} /></div>
-                    <div><label className="block text-xs font-medium text-gray-500 mb-0.5">ABC (₱)</label><input type="number" min={0} value={editingDraft.featuredItem.abc || ''} onChange={(e) => updateDraft('abc', Math.floor(Number(e.target.value)) || 0)} className={inputClassSm} /></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-0.5">ABC (₱)</label><input type="number" min={0} value={editingDraft.featuredItem.abc || ''} onChange={(e) => { const v = e.target.value; const stripped = v === '' ? 0 : Math.floor(Number(String(v).replace(/^0+/, '') || '0')) || 0; updateDraft('abc', stripped); }} className={inputClassSm} /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Closing Date</label><input type="date" value={editingDraft.featuredItem.closingDate && /^\d{4}-\d{2}-\d{2}$/.test(editingDraft.featuredItem.closingDate) ? editingDraft.featuredItem.closingDate : ''} onChange={(e) => updateDraft('closingDate', e.target.value)} className={inputClassSm} /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Opening Date</label><input type="date" value={editingDraft.featuredItem.openingDate && /^\d{4}-\d{2}-\d{2}$/.test(editingDraft.featuredItem.openingDate) ? editingDraft.featuredItem.openingDate : ''} onChange={(e) => updateDraft('openingDate', e.target.value)} className={inputClassSm} /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Status</label><select value={editingDraft.featuredItem.status || 'Active'} onChange={(e) => updateDraft('status', e.target.value)} className={inputClassSm}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-gray-500 mb-0.5">Location</label><input type="text" value={editingDraft.featuredItem.location || ''} onChange={(e) => updateDraft('location', e.target.value)} className={inputClassSm} /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Contact Person</label><input type="text" value={editingDraft.featuredItem.contactPerson || ''} onChange={(e) => updateDraft('contactPerson', e.target.value)} className={inputClassSm} /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Contact Email</label><input type="email" value={editingDraft.featuredItem.contactEmail || ''} onChange={(e) => updateDraft('contactEmail', e.target.value)} className={inputClassSm} /></div>
-                    <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Contact Phone</label><input type="text" value={editingDraft.featuredItem.contactPhone || ''} onChange={(e) => updateDraft('contactPhone', e.target.value)} className={inputClassSm} /></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-0.5">Contact Phone (09, 11 digits)</label><input type="text" inputMode="numeric" maxLength={11} value={editingDraft.featuredItem.contactPhone || ''} onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, 11); const v = !d ? '' : d.startsWith('09') ? d : d.startsWith('9') ? ('09' + d.slice(1)).slice(0, 11) : ('09' + d).slice(0, 11); updateDraft('contactPhone', v); }} className={inputClassSm} /></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-gray-500 mb-0.5">Project Description</label><textarea value={editingDraft.featuredItem.description || ''} onChange={(e) => updateDraft('description', e.target.value)} className={inputClassSm} rows={3} /></div>
                     <div className="sm:col-span-2"><label className="block text-xs font-medium text-gray-500 mb-0.5">Requirements (one per line)</label><textarea value={Array.isArray(editingDraft.featuredItem.requirements) ? editingDraft.featuredItem.requirements.join('\n') : ''} onChange={(e) => updateDraft('requirements', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} className={inputClassSm} rows={2} /></div>
                   </div>

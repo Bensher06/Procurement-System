@@ -38,7 +38,8 @@ const Requests = () => {
       const data = await requestsAPI.getMyRequests();
       setRequests(filterStatus ? data.filter(r => r.status === filterStatus) : data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load requests');
+      const message = typeof err?.message === 'string' ? err.message : (err?.details ?? 'Failed to load requests');
+      setError(message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -72,7 +73,7 @@ const Requests = () => {
     req.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const statuses: (RequestStatus | '')[] = ['', 'Draft', 'Pending', 'Approved', 'Rejected', 'Ordered', 'Received', 'Completed'];
+  const statuses: (RequestStatus | '')[] = ['', 'Draft', 'Pending', 'Negotiating', 'Approved', 'Rejected', 'Ordered', 'Received', 'Completed'];
 
   return (
     <div className="space-y-6">

@@ -124,7 +124,8 @@ const SupplierRegister = () => {
     const { name, value } = e.target;
     if (name === 'contact_number') {
       const digits = value.replace(/\D/g, '').slice(0, 11);
-      setFormData((f) => ({ ...f, [name]: digits }));
+      const normalized = !digits ? '' : digits.startsWith('09') ? digits : digits.startsWith('9') ? ('09' + digits.slice(1)).slice(0, 11) : ('09' + digits).slice(0, 11);
+      setFormData((f) => ({ ...f, [name]: normalized }));
     } else {
       setFormData((f) => ({ ...f, [name]: value }));
     }
@@ -240,9 +241,15 @@ const SupplierRegister = () => {
       setError('Please enter a valid email address (must contain @).');
       return;
     }
-    if (formData.contact_number && !/^\d+$/.test(formData.contact_number)) {
-      setError('Phone number must contain digits only.');
-      return;
+    if (formData.contact_number) {
+      if (!/^\d+$/.test(formData.contact_number)) {
+        setError('Phone number must contain digits only.');
+        return;
+      }
+      if (!formData.contact_number.startsWith('09') || formData.contact_number.length !== 11) {
+        setError('Phone number must start with 09 and be 11 digits (e.g. 09171234567).');
+        return;
+      }
     }
 
     setLoading(true);
@@ -442,7 +449,7 @@ const SupplierRegister = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Phone Number</label>
+                <label className="block text-sm font-medium text-black mb-2">Phone Number (max 11 digits)</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
@@ -452,7 +459,7 @@ const SupplierRegister = () => {
                     value={formData.contact_number}
                     onChange={handleChange}
                     className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
-                    placeholder="Digits only (e.g. 09973625731)"
+                    placeholder="Must start with 09 (e.g. 09171234567)"
                     maxLength={11}
                   />
                 </div>

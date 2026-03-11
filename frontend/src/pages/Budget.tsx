@@ -41,7 +41,7 @@ const Budget = () => {
     try {
       const [budgetsData, currentData] = await Promise.all([
         budgetsAPI.getAll(),
-        budgetsAPI.getCurrent()
+        budgetsAPI.getCurrentWithCommitted()
       ]);
       setBudgets(budgetsData);
       setCurrentBudget(currentData);

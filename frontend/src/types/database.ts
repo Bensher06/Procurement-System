@@ -13,6 +13,7 @@ export type UserRole = 'Faculty' | 'DeptHead' | 'Admin';
 export type RequestStatus = 
   | 'Draft' 
   | 'Pending' 
+  | 'Negotiating'
   | 'Approved' 
   | 'Rejected' 
   | 'Ordered' 
@@ -229,6 +230,9 @@ export interface Database {
           delegated_by: string | null;
           delegated_at: string | null;
           quotation_url: string | null;
+          bid_winner_supplier_id: string | null;
+          delivery_notes: string | null;
+          negotiating_notes: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -253,6 +257,9 @@ export interface Database {
           delegated_by?: string | null;
           delegated_at?: string | null;
           quotation_url?: string | null;
+          bid_winner_supplier_id?: string | null;
+          delivery_notes?: string | null;
+          negotiating_notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -275,6 +282,9 @@ export interface Database {
           delegated_by?: string | null;
           delegated_at?: string | null;
           quotation_url?: string | null;
+          bid_winner_supplier_id?: string | null;
+          delivery_notes?: string | null;
+          negotiating_notes?: string | null;
           updated_at?: string;
         };
       };
@@ -378,6 +388,7 @@ export type RequestWithRelations = Request & {
   category?: Category;
   supplier?: Supplier;
   delegated_to_profile?: Profile;
+  bid_winner_supplier?: Supplier;
 };
 
 export type CommentWithAuthor = RequestComment & {

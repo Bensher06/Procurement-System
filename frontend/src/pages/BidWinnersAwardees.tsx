@@ -36,7 +36,7 @@ export default function BidWinnersAwardees() {
     const client = getAnonClient();
     client
       .from('requests')
-      .select('id, item_name, total_price, approved_at, status, supplier:suppliers(name)')
+      .select('id, item_name, total_price, approved_at, status, supplier:suppliers!supplier_id(name)')
       .not('supplier_id', 'is', null)
       .order('approved_at', { ascending: false })
       .then(({ data, error }) => {

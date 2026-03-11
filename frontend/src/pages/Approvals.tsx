@@ -9,7 +9,8 @@ import {
   XCircle,
   Eye,
   AlertTriangle,
-  Clock
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 
 const Approvals = () => {
@@ -24,6 +25,11 @@ const Approvals = () => {
     id: null, 
     reason: '' 
   });
+  const [negotiateModal, setNegotiateModal] = useState<{ show: boolean; id: string | null; notes: string }>({ 
+    show: false, 
+    id: null, 
+    notes: '' 
+  });
 
   useEffect(() => {
     fetchData();
@@ -33,7 +39,7 @@ const Approvals = () => {
     try {
       const [requestsData, budgetData] = await Promise.all([
         requestsAPI.getPending(),
-        budgetsAPI.getCurrent()
+        budgetsAPI.getCurrentWithCommitted()
       ]);
       setRequests(requestsData);
       setBudget(budgetData);
@@ -62,17 +68,39 @@ const Approvals = () => {
 
   const handleReject = async () => {
     if (!rejectModal.id) return;
-    
-    setActionLoading(rejectModal.id);
+    const idToReject = rejectModal.id;
+    const reason = rejectModal.reason;
+    setActionLoading(idToReject);
     setError('');
-    
+    setRejectModal({ show: false, id: null, reason: '' });
     try {
-      await requestsAPI.reject(rejectModal.id, rejectModal.reason);
+      await requestsAPI.reject(idToReject, reason);
       setSuccess('Request rejected');
-      setRejectModal({ show: false, id: null, reason: '' });
-      fetchData();
+      setRequests((prev) => prev.filter((r) => r.id !== idToReject));
+      fetchData().catch(() => {});
     } catch (err: any) {
-      setError(err.message || 'Failed to reject request');
+      setError(err?.message || 'Failed to reject request');
+      setRejectModal((prev) => ({ ...prev, show: true, id: idToReject, reason }));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleNegotiate = async () => {
+    if (!negotiateModal.id) return;
+    const idToNegotiate = negotiateModal.id;
+    const notes = negotiateModal.notes.trim() || undefined;
+    setActionLoading(idToNegotiate);
+    setError('');
+    setNegotiateModal({ show: false, id: null, notes: '' });
+    try {
+      await requestsAPI.setNegotiating(idToNegotiate, notes);
+      setSuccess('Request sent for negotiation; faculty will be notified.');
+      setRequests((prev) => prev.filter((r) => r.id !== idToNegotiate));
+      fetchData().catch(() => {});
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send for negotiation');
+      setNegotiateModal((prev) => ({ ...prev, show: true, id: idToNegotiate, notes: prev.notes }));
     } finally {
       setActionLoading(null);
     }
@@ -183,7 +211,7 @@ const Approvals = () => {
                 <span className="text-sm text-gray-500">
                   Submitted {new Date(request.created_at).toLocaleDateString()}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Link
                     to={`/requests/${request.id}`}
                     className="px-4 py-2 text-gray-600 hover:text-wmsu-black hover:bg-gray-100 rounded-lg font-medium flex items-center gap-2"
@@ -191,6 +219,14 @@ const Approvals = () => {
                     <Eye className="w-4 h-4" />
                     View Details
                   </Link>
+                  <button
+                    onClick={() => setNegotiateModal({ show: true, id: request.id, notes: '' })}
+                    disabled={actionLoading === request.id}
+                    className="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Negotiate
+                  </button>
                   <button
                     onClick={() => setRejectModal({ show: true, id: request.id, reason: '' })}
                     disabled={actionLoading === request.id}
@@ -245,6 +281,38 @@ const Approvals = () => {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Rejecting...' : 'Reject Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Negotiate Modal */}
+      {negotiateModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-wmsu-black mb-4">Request negotiation</h3>
+            <p className="text-sm text-gray-600 mb-4">The faculty will be notified. You can add an optional note for them.</p>
+            <textarea
+              value={negotiateModal.notes}
+              onChange={(e) => setNegotiateModal(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Optional note to faculty..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
+              rows={3}
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setNegotiateModal({ show: false, id: null, notes: '' })}
+                className="px-4 py-2 text-gray-600 hover:text-wmsu-black"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleNegotiate}
+                disabled={!!actionLoading}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium disabled:opacity-50"
+              >
+                {actionLoading ? 'Sending...' : 'Send for negotiation'}
               </button>
             </div>
           </div>

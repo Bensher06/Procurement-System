@@ -30,6 +30,12 @@ const statusConfig: Record<string, StatusConfig> = {
     icon: Clock,
     label: 'Pending'
   },
+  Negotiating: {
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    icon: Clock,
+    label: 'Negotiating'
+  },
   Approved: {
     bg: 'bg-emerald-50',
     text: 'text-emerald-700',
@@ -46,13 +52,13 @@ const statusConfig: Record<string, StatusConfig> = {
     bg: 'bg-violet-50',
     text: 'text-violet-700',
     icon: ShoppingCart,
-    label: 'Ordered'
+    label: 'Gathering supplies'
   },
   Received: {
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     icon: Package,
-    label: 'Received'
+    label: 'Delivering'
   },
   Completed: {
     bg: 'bg-green-50',
@@ -101,6 +107,7 @@ export const StatusDot = ({ status }: { status: string }) => {
   const dotColors: Record<string, string> = {
     Draft: 'bg-slate-400',
     Pending: 'bg-amber-500',
+    Negotiating: 'bg-orange-500',
     Approved: 'bg-emerald-500',
     Rejected: 'bg-rose-500',
     Ordered: 'bg-violet-500',

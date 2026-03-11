@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { requestsAPI, commentsAPI, activityAPI, budgetsAPI, profilesAPI } from '../lib/supabaseApi';
+import { requestsAPI, commentsAPI, activityAPI, budgetsAPI, profilesAPI, suppliersAPI } from '../lib/supabaseApi';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge, { StatusDot } from '../components/StatusBadge';
-import type { RequestWithRelations, CommentWithAuthor, ActivityWithActor, Budget, Profile } from '../types/database';
+import type { RequestWithRelations, CommentWithAuthor, ActivityWithActor, Budget, Profile, Supplier } from '../types/database';
 import {
   ArrowLeft,
   Package,
@@ -24,6 +24,7 @@ import {
   MessageSquare,
   Clock,
   UserPlus,
+  Award,
   FileImage,
   Download,
   ChevronRight,
@@ -53,6 +54,12 @@ const RequestDetail = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showDelegateModal, setShowDelegateModal] = useState(false);
   const [delegateTo, setDelegateTo] = useState('');
+  const [showNegotiateModal, setShowNegotiateModal] = useState(false);
+  const [negotiateNotes, setNegotiateNotes] = useState('');
+  const [showDeliveringModal, setShowDeliveringModal] = useState(false);
+  const [deliveringBidWinnerId, setDeliveringBidWinnerId] = useState('');
+  const [deliveringNotes, setDeliveringNotes] = useState('');
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -66,7 +73,7 @@ const RequestDetail = () => {
         requestsAPI.getById(id!),
         commentsAPI.getByRequestId(id!).catch(() => []),
         activityAPI.getByRequestId(id!).catch(() => []),
-        budgetsAPI.getCurrent()
+        budgetsAPI.getCurrentWithCommitted()
       ]);
       setRequest(requestData);
       setComments(commentsData);
@@ -76,6 +83,9 @@ const RequestDetail = () => {
       // Fetch potential approvers (DeptHead and Admin)
       const allProfiles = await profilesAPI.getAll();
       setApprovers(allProfiles.filter(p => p.role === 'DeptHead' || p.role === 'Admin'));
+      // Fetch suppliers for bid winner dropdown (admin only, when needed)
+      const suppliersList = await suppliersAPI.getAll();
+      setSuppliers(suppliersList);
     } catch (err: any) {
       setError(err.message || 'Failed to load request details');
     } finally {
@@ -102,11 +112,28 @@ const RequestDetail = () => {
           setShowDelegateModal(false);
           setDelegateTo('');
           break;
+        case 'negotiate':
+          await requestsAPI.setNegotiating(id!, negotiateNotes || undefined);
+          setShowNegotiateModal(false);
+          setNegotiateNotes('');
+          break;
+        case 'agree':
+          await requestsAPI.agreeToProceed(id!);
+          break;
         case 'order':
           await requestsAPI.markOrdered(id!);
           break;
         case 'receive':
           await requestsAPI.markReceived(id!);
+          break;
+        case 'delivering':
+          await requestsAPI.markDelivering(id!, {
+            bid_winner_supplier_id: deliveringBidWinnerId || null,
+            delivery_notes: deliveringNotes.trim() || null
+          });
+          setShowDeliveringModal(false);
+          setDeliveringBidWinnerId('');
+          setDeliveringNotes('');
           break;
         case 'complete':
           await requestsAPI.markCompleted(id!);
@@ -250,6 +277,14 @@ const RequestDetail = () => {
                       Delegate
                     </button>
                     <button
+                      onClick={() => setShowNegotiateModal(true)}
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Negotiate
+                    </button>
+                    <button
                       onClick={() => setShowRejectModal(true)}
                       disabled={actionLoading}
                       className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
@@ -279,22 +314,22 @@ const RequestDetail = () => {
                     className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    Mark as Ordered
+                    Mark as Gathering supplies
                   </button>
                 )}
 
                 {request.status === 'Ordered' && (
                   <button
-                    onClick={() => handleAction('receive')}
+                    onClick={() => setShowDeliveringModal(true)}
                     disabled={actionLoading}
                     className="px-4 py-2 bg-red-900 hover:bg-red-800 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
                   >
                     <Truck className="w-4 h-4" />
-                    Mark as Received
+                    Mark as Delivering
                   </button>
                 )}
 
-                {request.status === 'Received' && (
+                {request.status === 'Received' && canApprove() && (
                   <button
                     onClick={() => handleAction('complete')}
                     disabled={actionLoading}
@@ -302,6 +337,31 @@ const RequestDetail = () => {
                   >
                     <CheckSquare className="w-4 h-4" />
                     Complete
+                  </button>
+                )}
+              </div>
+            )}
+            {/* Faculty actions: Negotiating (agree) and Delivering (confirm received) */}
+            {!canApprove() && request.requester_id === profile?.id && (
+              <div className="flex items-center gap-2">
+                {request.status === 'Negotiating' && (
+                  <button
+                    onClick={() => handleAction('agree')}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    I agree to proceed
+                  </button>
+                )}
+                {request.status === 'Received' && (
+                  <button
+                    onClick={() => handleAction('complete')}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
+                    Confirm I received the supplies
                   </button>
                 )}
               </div>
@@ -366,6 +426,46 @@ const RequestDetail = () => {
                   <div>
                     <p className="font-medium text-rose-800">Request Rejected</p>
                     <p className="text-rose-700 mt-1">{request.rejection_reason}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Negotiation requested (faculty sees this when status is Negotiating) */}
+            {request.status === 'Negotiating' && (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-orange-800">Admin requested negotiation</p>
+                    {request.negotiating_notes && (
+                      <p className="text-orange-700 mt-1">{request.negotiating_notes}</p>
+                    )}
+                    <p className="text-sm text-orange-600 mt-2">If you agree, click &quot;I agree to proceed&quot; above so the request returns to the admin for approval.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delivery confirmation (bid winner + details – faculty sees when status is Delivering/Received) */}
+            {request.status === 'Received' && (request.bid_winner_supplier || request.delivery_notes) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Award className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-blue-800">Delivery confirmation</p>
+                    {request.bid_winner_supplier && (
+                      <p className="text-blue-700 mt-1">
+                        <span className="font-medium">Bid winner: </span>
+                        {request.bid_winner_supplier.name}
+                      </p>
+                    )}
+                    {request.delivery_notes && (
+                      <p className="text-blue-700 mt-2 whitespace-pre-wrap">{request.delivery_notes}</p>
+                    )}
+                    {!canApprove() && request.requester_id === profile?.id && (
+                      <p className="text-sm text-blue-600 mt-2">Once you receive the supplies, click &quot;Confirm I received the supplies&quot; above to complete the request.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -763,6 +863,92 @@ const RequestDetail = () => {
               >
                 {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                 Delegate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Negotiate Modal */}
+      {showNegotiateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-wmsu-black">Request negotiation</h3>
+              <button onClick={() => setShowNegotiateModal(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-600 mb-4">The faculty will be notified. You can add an optional note.</p>
+              <textarea
+                value={negotiateNotes}
+                onChange={(e) => setNegotiateNotes(e.target.value)}
+                placeholder="Optional note to faculty..."
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 resize-none"
+                rows={3}
+              />
+            </div>
+            <div className="px-6 py-4 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
+              <button onClick={() => setShowNegotiateModal(false)} className="px-4 py-2 text-slate-600 hover:text-wmsu-black font-medium">Cancel</button>
+              <button
+                onClick={() => handleAction('negotiate')}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                Send for negotiation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark as Delivering Modal (bid winner + confirmation details) */}
+      {showDeliveringModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-wmsu-black">Mark as Delivering</h3>
+              <button onClick={() => setShowDeliveringModal(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">Confirm delivery to faculty: add the bid winner and any details to send to the requester.</p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Bid winner (optional)</label>
+                <select
+                  value={deliveringBidWinnerId}
+                  onChange={(e) => setDeliveringBidWinnerId(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                >
+                  <option value="">Select supplier...</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Details for faculty (optional)</label>
+                <textarea
+                  value={deliveringNotes}
+                  onChange={(e) => setDeliveringNotes(e.target.value)}
+                  placeholder="Request details, delivery info, etc."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 resize-none"
+                  rows={4}
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
+              <button onClick={() => setShowDeliveringModal(false)} className="px-4 py-2 text-slate-600 hover:text-wmsu-black font-medium">Cancel</button>
+              <button
+                onClick={() => handleAction('delivering')}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-red-900 hover:bg-red-800 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+                Mark as Delivering
               </button>
             </div>
           </div>

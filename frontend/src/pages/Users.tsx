@@ -397,7 +397,11 @@ const Users = () => {
                     min="0"
                     step="0.01"
                     value={formData.approved_budget}
-                    onChange={(e) => setFormData(prev => ({ ...prev, approved_budget: e.target.value }))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const stripped = v === '' ? '' : String(v).replace(/^0+(?=\d)/, '');
+                      setFormData(prev => ({ ...prev, approved_budget: stripped }));
+                    }}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600"
                     placeholder="e.g. 50000"
                   />

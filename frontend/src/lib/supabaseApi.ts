@@ -332,6 +332,22 @@ export const budgetsAPI = {
     return aggregated;
   },
 
+  /** Current budget with "used" = sum of Approved + Ordered + Received + Completed (so remaining reflects committed budget) */
+  getCurrentWithCommitted: async (): Promise<Budget | null> => {
+    const current = await budgetsAPI.getCurrent();
+    if (!current) return null;
+    const { data: rows } = await supabase
+      .from('requests')
+      .select('total_price')
+      .in('status', ['Approved', 'Ordered', 'Received', 'Completed']);
+    const used = rows?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
+    return {
+      ...current,
+      spent_amount: used,
+      remaining_amount: Math.max(0, current.total_amount - used)
+    };
+  },
+
   getCurrentYearBudgets: async (): Promise<Budget[]> => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
@@ -457,7 +473,7 @@ export const requestsAPI = {
         *,
         requester:profiles!requester_id(*),
         category:categories(*),
-        supplier:suppliers(*)
+        supplier:suppliers!supplier_id(*)
       `)
       .order('created_at', { ascending: false });
 
@@ -480,7 +496,7 @@ export const requestsAPI = {
         *,
         requester:profiles!requester_id(*),
         category:categories(*),
-        supplier:suppliers(*)
+        supplier:suppliers!supplier_id(*)
       `)
       .eq('requester_id', user.id)
       .order('created_at', { ascending: false });
@@ -496,7 +512,7 @@ export const requestsAPI = {
         *,
         requester:profiles!requester_id(*),
         category:categories(*),
-        supplier:suppliers(*)
+        supplier:suppliers!supplier_id(*)
       `)
       .eq('status', 'Pending')
       .order('created_at', { ascending: true });
@@ -512,8 +528,9 @@ export const requestsAPI = {
         *,
         requester:profiles!requester_id(*),
         category:categories(*),
-        supplier:suppliers(*),
-        delegated_to_profile:profiles!delegated_to(*)
+        supplier:suppliers!supplier_id(*),
+        delegated_to_profile:profiles!delegated_to(*),
+        bid_winner_supplier:suppliers!bid_winner_supplier_id(*)
       `)
       .eq('id', id)
       .single();
@@ -534,12 +551,11 @@ export const requestsAPI = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const total_price = request.quantity * request.unit_price;
+    // total_price is computed by the database (trigger or generated column), do not send it on insert
     const { data, error } = await supabase
       .from('requests')
       .insert({
         ...request,
-        total_price,
         requester_id: user.id,
         status: request.status || 'Draft'
       })
@@ -587,11 +603,26 @@ export const requestsAPI = {
 
   reject: async (id: string, reason: string): Promise<Request> => {
     const { data: { user } } = await supabase.auth.getUser();
-    return requestsAPI.update(id, { 
+    const updates: Partial<Request> = {
       status: 'Rejected',
-      rejection_reason: reason,
-      approved_by: user?.id,
+      rejection_reason: reason || null,
       approved_at: new Date().toISOString()
+    };
+    if (user?.id) updates.approved_by = user.id;
+    return requestsAPI.update(id, updates);
+  },
+
+  setNegotiating: async (id: string, notes?: string): Promise<Request> => {
+    return requestsAPI.update(id, {
+      status: 'Negotiating',
+      negotiating_notes: notes || null
+    });
+  },
+
+  agreeToProceed: async (id: string): Promise<Request> => {
+    return requestsAPI.update(id, {
+      status: 'Pending',
+      negotiating_notes: null
     });
   },
 
@@ -606,6 +637,15 @@ export const requestsAPI = {
     return requestsAPI.update(id, { 
       status: 'Received',
       received_at: new Date().toISOString()
+    });
+  },
+
+  markDelivering: async (id: string, payload: { bid_winner_supplier_id?: string | null; delivery_notes?: string | null }): Promise<Request> => {
+    return requestsAPI.update(id, { 
+      status: 'Received',
+      received_at: new Date().toISOString(),
+      bid_winner_supplier_id: payload.bid_winner_supplier_id ?? null,
+      delivery_notes: payload.delivery_notes ?? null
     });
   },
 
@@ -703,22 +743,27 @@ export const dashboardAPI = {
     if (isAdminOrDeptHead) {
       const uniBudget = await budgetsAPI.getCurrent();
       if (uniBudget) {
+        const { data: committedRequests } = await supabase
+          .from('requests')
+          .select('total_price')
+          .in('status', ['Approved', 'Ordered', 'Received', 'Completed']);
+        const used = committedRequests?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
         budget = {
           total: uniBudget.total_amount,
-          spent: uniBudget.spent_amount,
-          remaining: uniBudget.remaining_amount,
+          spent: used,
+          remaining: Math.max(0, uniBudget.total_amount - used),
           academicYear: uniBudget.academic_year
         };
       }
     } else {
-      // Faculty: use their approved_budget and their own spent (Ordered/Received/Completed requests)
+      // Faculty: use their approved_budget and their own used (Approved + Ordered/Received/Completed)
       const approvedTotal = Number(profile?.approved_budget) || 0;
-      const { data: spentRequests } = await supabase
+      const { data: usedRequests } = await supabase
         .from('requests')
         .select('total_price')
         .eq('requester_id', user.id)
-        .in('status', ['Ordered', 'Received', 'Completed']);
-      const spent = spentRequests?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
+        .in('status', ['Approved', 'Ordered', 'Received', 'Completed']);
+      const spent = usedRequests?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
       budget = {
         total: approvedTotal,
         spent,
@@ -746,7 +791,9 @@ export const dashboardAPI = {
     
     const requestsByStatus: Record<string, number> = {};
     requestsData?.forEach(r => {
-      requestsByStatus[r.status] = (requestsByStatus[r.status] || 0) + 1;
+      const status = r.status;
+      const key = status ? status.charAt(0).toUpperCase() + (status.slice(1) || '').toLowerCase() : status;
+      requestsByStatus[key] = (requestsByStatus[key] || 0) + 1;
     });
 
     // Get monthly spending

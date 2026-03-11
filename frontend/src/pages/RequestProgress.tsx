@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../lib/supabaseApi';
 import StatusBadge from '../components/StatusBadge';
-import { CircleDot, Loader2, FileText } from 'lucide-react';
+import { CircleDot, Loader2, FileText, Wallet, RefreshCw } from 'lucide-react';
 
 const REQUEST_PROGRESS_STAGES: { key: string; label: string }[] = [
   { key: 'Draft', label: 'Draft' },
   { key: 'Pending', label: 'Pending' },
+  { key: 'Negotiating', label: 'Negotiating' },
   { key: 'Approved', label: 'Approved' },
-  { key: 'Ordered', label: 'Ordered' },
-  { key: 'Received', label: 'Received' },
+  { key: 'Ordered', label: 'Gathering supplies' },
+  { key: 'Received', label: 'Delivering' },
   { key: 'Completed', label: 'Completed' }
 ];
 
@@ -26,15 +27,16 @@ interface DashboardStats {
 
 const RequestProgress = () => {
   const { profile, canApprove } = useAuth();
+  const location = useLocation();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
+  const fetchStats = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
       const data = await dashboardAPI.getStats();
       setStats({
@@ -42,11 +44,27 @@ const RequestProgress = () => {
         recentRequests: data.recentRequests || []
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to load request progress');
+      if (!silent) setError(err?.message || 'Failed to load request progress');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/request-progress' && stats != null) {
+      fetchStats(true);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const onFocus = () => fetchStats(true);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   if (loading) {
     return (
@@ -58,11 +76,16 @@ const RequestProgress = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        {error}
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 space-y-3">
+        <p>{error}</p>
+        <button type="button" onClick={() => fetchStats()} className="px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-red-800 text-sm font-medium">
+          Try again
+        </button>
       </div>
     );
   }
+
+  const approvedBudget = profile?.approved_budget != null ? Number(profile.approved_budget) : null;
 
   return (
     <div className="space-y-6">
@@ -85,10 +108,21 @@ const RequestProgress = () => {
         </Link>
       </div>
 
+      {/* Approved budget (faculty only) */}
+      {!canApprove() && approvedBudget != null && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <Wallet className="w-8 h-8 text-red-800 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-red-900">Your approved budget</p>
+            <p className="text-2xl font-bold text-red-800">₱{approvedBudget.toLocaleString()}</p>
+          </div>
+        </div>
+      )}
+
       {/* Pipeline */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <p className="text-sm text-gray-500 mb-4">
-          Pipeline: Draft → Pending → Approved → Ordered → Received → Completed
+          Pipeline: Draft → Pending → Negotiating → Approved → Gathering supplies → Delivering → Completed
         </p>
         <div className="flex flex-wrap items-end gap-2 sm:gap-0 sm:flex-nowrap sm:justify-between">
           {REQUEST_PROGRESS_STAGES.map((stage, index) => {
@@ -125,9 +159,15 @@ const RequestProgress = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-wmsu-black">Your requests</h3>
-          <Link to="/requests" className="text-sm text-red-900 hover:text-red-800">
-            View all
-          </Link>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => fetchStats()} disabled={loading} className="text-sm text-red-900 hover:text-red-800 disabled:opacity-50 flex items-center gap-1" title="Refresh">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <Link to="/requests" className="text-sm text-red-900 hover:text-red-800">
+              View all
+            </Link>
+          </div>
         </div>
         <div className="space-y-3">
           {stats?.recentRequests?.length > 0 ? (

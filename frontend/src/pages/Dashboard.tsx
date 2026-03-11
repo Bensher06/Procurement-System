@@ -17,9 +17,10 @@ import {
 const REQUEST_PROGRESS_STAGES: { key: string; label: string }[] = [
   { key: 'Draft', label: 'Draft' },
   { key: 'Pending', label: 'Pending' },
+  { key: 'Negotiating', label: 'Negotiating' },
   { key: 'Approved', label: 'Approved' },
-  { key: 'Ordered', label: 'Ordered' },
-  { key: 'Received', label: 'Received' },
+  { key: 'Ordered', label: 'Gathering supplies' },
+  { key: 'Received', label: 'Delivering' },
   { key: 'Completed', label: 'Completed' }
 ];
 
@@ -124,6 +125,11 @@ const Dashboard = () => {
           <p className="text-2xl font-bold text-wmsu-black">
             ₱{stats?.budget?.remaining?.toLocaleString() || 0}
           </p>
+          {!canApprove() && stats?.budget && (
+            <p className="text-xs text-gray-500 mt-0.5">
+              of ₱{stats.budget.total.toLocaleString()} approved
+            </p>
+          )}
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
               <span>Used: ₱{stats?.budget?.spent?.toLocaleString()}</span>
@@ -201,7 +207,7 @@ className="mt-3 text-sm text-gray-700 hover:text-gray-900 inline-flex items-cent
             Your request progress
           </h3>
           <p className="text-sm text-gray-500 mb-4">
-            Pipeline: Draft → Pending → Approved → Ordered → Received → Completed
+            Pipeline: Draft → Pending → Negotiating → Approved → Gathering supplies → Delivering → Completed
           </p>
           <div className="flex flex-wrap items-end gap-2 sm:gap-0 sm:flex-nowrap sm:justify-between">
             {REQUEST_PROGRESS_STAGES.map((stage, index) => {
@@ -255,61 +261,63 @@ className="mt-3 text-sm text-gray-700 hover:text-gray-900 inline-flex items-cent
           </div>
         </div>
 
-        {/* Recent Requests */}
-        <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Requests</h3>
-            <Link 
-              to="/requests"
-              className="text-sm text-gray-700 hover:text-gray-900"
-            >
-              View all
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {stats?.recentRequests?.length > 0 ? (
-              stats.recentRequests.map((request: any) => {
-                const stepIndex = getStatusStepIndex(request.status);
-                const totalSteps = REQUEST_PROGRESS_STAGES.length;
-                return (
-                  <Link
-                    key={request.id}
-                    to={`/requests/${request.id}`}
-                    className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-wmsu-black truncate">{request.item_name}</p>
-                        <p className="text-sm text-gray-500">
-                          {request.category?.name} • ₱{request.total_price?.toLocaleString()}
-                        </p>
-                        {!canApprove() && stepIndex >= 0 && (
-                          <div className="mt-2 flex items-center gap-1">
-                            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex">
-                              {REQUEST_PROGRESS_STAGES.map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`flex-1 ${i <= stepIndex ? 'bg-red-600' : 'bg-gray-200'}`}
-                                  style={{ minWidth: 4 }}
-                                />
-                              ))}
+        {/* Recent Requests – only for faculty (admin uses full request history via Requests / View all) */}
+        {!canApprove() && (
+          <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Requests</h3>
+              <Link 
+                to="/requests"
+                className="text-sm text-gray-700 hover:text-gray-900"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {stats?.recentRequests?.length > 0 ? (
+                stats.recentRequests.map((request: any) => {
+                  const stepIndex = getStatusStepIndex(request.status);
+                  const totalSteps = REQUEST_PROGRESS_STAGES.length;
+                  return (
+                    <Link
+                      key={request.id}
+                      to={`/requests/${request.id}`}
+                      className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-wmsu-black truncate">{request.item_name}</p>
+                          <p className="text-sm text-gray-500">
+                            {request.category?.name} • ₱{request.total_price?.toLocaleString()}
+                          </p>
+                          {stepIndex >= 0 && (
+                            <div className="mt-2 flex items-center gap-1">
+                              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden flex">
+                                {REQUEST_PROGRESS_STAGES.map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className={`flex-1 ${i <= stepIndex ? 'bg-red-600' : 'bg-gray-200'}`}
+                                    style={{ minWidth: 4 }}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs text-gray-500 whitespace-nowrap">
+                                {stepIndex + 1}/{totalSteps} {request.status}
+                              </span>
                             </div>
-                            <span className="text-xs text-gray-500 whitespace-nowrap">
-                              {stepIndex + 1}/{totalSteps} {request.status}
-                            </span>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        <StatusBadge status={request.status} size="sm" showIcon={false} />
                       </div>
-                      <StatusBadge status={request.status} size="sm" showIcon={false} />
-                    </div>
-                  </Link>
-                );
-              })
-            ) : (
-              <p className="text-center text-gray-400 py-4">No recent requests</p>
-            )}
+                    </Link>
+                  );
+                })
+              ) : (
+                <p className="text-center text-gray-400 py-4">No recent requests</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

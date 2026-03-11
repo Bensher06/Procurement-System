@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
@@ -24,20 +24,13 @@ import BidWinnersAwardees from './pages/BidWinnersAwardees';
 import Budget from './pages/Budget';
 import BudgetFundSources from './pages/BudgetFundSources';
 
-function RootRoute() {
-  const { isAuthenticated, isAdmin } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/accreditation-portal" replace />;
-  if (isAdmin()) return <Navigate to="/dashboard" replace />;
-  return <Navigate to="/request-progress" replace />;
-}
-
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<RootRoute />} />
+          <Route path="/" element={<Landing />} />
           <Route path="/landing" element={<Landing />} />
           <Route path="/active-bidding" element={<ActiveBidding />} />
           <Route path="/bid-bulletins" element={<BidBulletins />} />
