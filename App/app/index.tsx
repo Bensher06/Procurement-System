@@ -19,28 +19,38 @@ export default function AuthGate() {
         router.replace('/landing');
         return;
       }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      if (profile?.role === 'Admin') {
-        await supabase.auth.signOut();
-        router.replace('/login');
-      } else {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        if (profile?.role === 'Admin') {
+          await supabase.auth.signOut();
+          router.replace('/login');
+        } else {
+          router.replace('/(tabs)');
+        }
+      } catch {
         router.replace('/(tabs)');
       }
     };
 
     const run = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setChecking(false);
-      if (session) {
-        await checkSession(session);
-      } else {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setChecking(false);
+        if (session) {
+          await checkSession(session);
+        } else {
+          router.replace('/landing');
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setChecking(false);
         router.replace('/landing');
       }
     };
