@@ -232,6 +232,7 @@ export interface Database {
           quotation_url: string | null;
           bid_winner_supplier_id: string | null;
           delivery_notes: string | null;
+          delivery_attachment_url: string | null;
           negotiating_notes: string | null;
           created_at: string;
           updated_at: string;
@@ -259,6 +260,7 @@ export interface Database {
           quotation_url?: string | null;
           bid_winner_supplier_id?: string | null;
           delivery_notes?: string | null;
+          delivery_attachment_url?: string | null;
           negotiating_notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -284,6 +286,7 @@ export interface Database {
           quotation_url?: string | null;
           bid_winner_supplier_id?: string | null;
           delivery_notes?: string | null;
+          delivery_attachment_url?: string | null;
           negotiating_notes?: string | null;
           updated_at?: string;
         };

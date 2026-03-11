@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../lib/supabaseApi';
 import StatusBadge from '../components/StatusBadge';
-import { CircleDot, Loader2, FileText, Wallet, RefreshCw } from 'lucide-react';
+import { CircleDot, Loader2, FileText, Wallet, RefreshCw, ChevronRight } from 'lucide-react';
 
 const REQUEST_PROGRESS_STAGES: { key: string; label: string }[] = [
   { key: 'Draft', label: 'Draft' },
@@ -31,6 +31,7 @@ const RequestProgress = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [hiddenCompletedRequestId, setHiddenCompletedRequestId] = useState<string | null>(null);
 
   const fetchStats = async (silent = false) => {
     if (!silent) {
@@ -39,6 +40,7 @@ const RequestProgress = () => {
     }
     try {
       const data = await dashboardAPI.getStats();
+      setHiddenCompletedRequestId(null);
       setStats({
         requestsByStatus: data.requestsByStatus || {},
         recentRequests: data.recentRequests || []
@@ -53,6 +55,14 @@ const RequestProgress = () => {
   useEffect(() => {
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    if (!stats?.recentRequests?.length || canApprove()) return;
+    const completed = stats.recentRequests.find((r: any) => r.status === 'Completed');
+    if (!completed || hiddenCompletedRequestId === completed.id) return;
+    const timer = setTimeout(() => setHiddenCompletedRequestId(completed.id), 10_000);
+    return () => clearTimeout(timer);
+  }, [stats?.recentRequests, hiddenCompletedRequestId, canApprove]);
 
   useEffect(() => {
     if (location.pathname === '/request-progress' && stats != null) {
@@ -124,34 +134,59 @@ const RequestProgress = () => {
         <p className="text-sm text-gray-500 mb-4">
           Pipeline: Draft → Pending → Negotiating → Approved → Gathering supplies → Delivering → Completed
         </p>
-        <div className="flex flex-wrap items-end gap-2 sm:gap-0 sm:flex-nowrap sm:justify-between">
+        <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
           {REQUEST_PROGRESS_STAGES.map((stage, index) => {
-            const count = stats?.requestsByStatus?.[stage.key] || 0;
+            let count = stats?.requestsByStatus?.[stage.key] || 0;
+            if (stage.key === 'Completed' && hiddenCompletedRequestId) count = Math.max(0, count - 1);
+            const isCurrent = count > 0;
+            const isLast = index === REQUEST_PROGRESS_STAGES.length - 1;
             return (
-              <div key={stage.key} className="flex flex-col items-center flex-1 min-w-[4rem]">
-                <div className="flex items-center gap-0.5 w-full justify-center">
-                  {index > 0 && (
-                    <div className="hidden sm:block flex-1 h-0.5 bg-gray-200 -mr-px max-w-[20px]" style={{ minWidth: 8 }} />
-                  )}
-                  <div className="flex flex-col items-center">
-                    <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-gray-600">{count}</span>
-                    </div>
-                    <span className="text-xs text-gray-600 mt-1 text-center leading-tight">{stage.label}</span>
+              <div key={stage.key} className="flex items-center gap-1 sm:gap-2">
+                <Link
+                  to={`/requests?status=${encodeURIComponent(stage.key)}`}
+                  className={`flex flex-col items-center gap-2 min-w-0 group cursor-pointer shrink-0 rounded-lg p-2 -m-2 hover:bg-gray-100 transition-colors ${isLast ? '' : 'mr-0'}`}
+                  title={`View ${stage.label} requests`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      isCurrent
+                        ? 'bg-green-500 border-green-600 text-white group-hover:bg-green-600'
+                        : 'bg-gray-100 border-gray-200 group-hover:bg-gray-200 group-hover:border-gray-300'
+                    }`}
+                  >
+                    <span className={`text-xs font-semibold ${isCurrent ? 'text-white' : 'text-gray-600'}`}>
+                      {count}
+                    </span>
                   </div>
-                  {index < REQUEST_PROGRESS_STAGES.length - 1 && (
-                    <div className="hidden sm:block flex-1 h-0.5 bg-gray-200 -ml-px max-w-[20px]" style={{ minWidth: 8 }} />
-                  )}
-                </div>
+                  <span
+                    className={`text-[11px] sm:text-xs text-center leading-tight min-h-[2rem] flex items-center justify-center ${
+                      isCurrent ? 'text-green-700 font-medium' : 'text-gray-600'
+                    }`}
+                  >
+                    {stage.label}
+                  </span>
+                </Link>
+                {!isLast && (
+                  <ChevronRight
+                    className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${
+                      isCurrent ? 'text-green-500' : 'text-gray-300'
+                    }`}
+                    aria-hidden
+                  />
+                )}
               </div>
             );
           })}
         </div>
         {(stats?.requestsByStatus?.Rejected ?? 0) > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
+          <Link
+            to="/requests?status=Rejected"
+            className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 w-fit hover:opacity-80 transition-opacity cursor-pointer"
+            title="View rejected requests"
+          >
             <StatusBadge status="Rejected" size="sm" />
             <span className="text-sm text-gray-600">{stats?.requestsByStatus?.Rejected} rejected</span>
-          </div>
+          </Link>
         )}
       </div>
 
@@ -170,15 +205,16 @@ const RequestProgress = () => {
           </div>
         </div>
         <div className="space-y-3">
-          {stats?.recentRequests?.length > 0 ? (
-            stats.recentRequests.map((request: any) => {
+          {(stats?.recentRequests?.filter((r: any) => r.id !== hiddenCompletedRequestId)?.length ?? 0) > 0 ? (
+            stats.recentRequests.filter((r: any) => r.id !== hiddenCompletedRequestId).map((request: any) => {
               const stepIndex = getStatusStepIndex(request.status);
               const totalSteps = REQUEST_PROGRESS_STAGES.length;
               return (
                 <Link
                   key={request.id}
                   to={`/requests/${request.id}`}
-                  className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-100"
+                  className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-100 cursor-pointer"
+                  title="View request progress"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">

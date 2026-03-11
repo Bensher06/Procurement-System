@@ -25,7 +25,11 @@ Run in this order (each in a new SQL Editor tab):
    - Adds **Negotiating** workflow and **bid winner / delivery notes** when marking a request as Delivering.  
    - Adds columns: `bid_winner_supplier_id`, `delivery_notes`, `negotiating_notes`.
 
-After all run successfully, request progress, approve/reject/negotiate, and the full pipeline (Gathering supplies → Delivering → Completed) work as intended.
+4. **`20250327000000_requests_delivery_attachment.sql`**  
+   - Adds optional **delivery attachment** URL when marking as Delivering.  
+   - Adds column: `delivery_attachment_url`.
+
+After all run successfully, request progress, approve/reject/negotiate, the full pipeline (Gathering supplies → Delivering → Completed), and optional delivery attachments work as intended.
 
 ## If something still doesn’t work
 

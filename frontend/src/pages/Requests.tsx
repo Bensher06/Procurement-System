@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { requestsAPI } from '../lib/supabaseApi';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
@@ -17,20 +17,38 @@ import {
 } from 'lucide-react';
 
 const Requests = () => {
-  const { canApprove } = useAuth();
+  const { profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get('status') as RequestStatus | null;
   const [requests, setRequests] = useState<RequestWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState((location.state as any)?.message || '');
-  const [filterStatus, setFilterStatus] = useState<RequestStatus | ''>('');
+  const [filterStatus, setFilterStatus] = useState<RequestStatus | ''>(statusFromUrl || '');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    if (profile?.role === 'Admin') navigate('/dashboard', { replace: true });
+  }, [profile?.role, navigate]);
+
+  useEffect(() => {
+    const status = searchParams.get('status') as RequestStatus | null;
+    if (status) setFilterStatus(status);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (profile?.role === 'Admin') return;
     fetchRequests();
-    // Clear location state
     window.history.replaceState({}, document.title);
-  }, [filterStatus]);
+  }, [filterStatus, profile?.role]);
+
+  const setStatusFilter = (status: RequestStatus | '') => {
+    setFilterStatus(status);
+    if (status) setSearchParams({ status });
+    else setSearchParams({});
+  };
 
   const fetchRequests = async () => {
     try {
@@ -74,6 +92,8 @@ const Requests = () => {
   );
 
   const statuses: (RequestStatus | '')[] = ['', 'Draft', 'Pending', 'Negotiating', 'Approved', 'Rejected', 'Ordered', 'Received', 'Completed'];
+
+  if (profile?.role === 'Admin') return null;
 
   return (
     <div className="space-y-6">
@@ -126,7 +146,7 @@ const Requests = () => {
             <Filter className="w-5 h-5 text-gray-400" />
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as RequestStatus | '')}
+              onChange={(e) => setStatusFilter(e.target.value as RequestStatus | '')}
               className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600"
             >
               <option value="">All Statuses</option>

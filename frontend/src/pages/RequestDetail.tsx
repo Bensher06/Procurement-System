@@ -59,6 +59,7 @@ const RequestDetail = () => {
   const [showDeliveringModal, setShowDeliveringModal] = useState(false);
   const [deliveringBidWinnerId, setDeliveringBidWinnerId] = useState('');
   const [deliveringNotes, setDeliveringNotes] = useState('');
+  const [deliveringAttachmentFile, setDeliveringAttachmentFile] = useState<File | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
@@ -66,6 +67,10 @@ const RequestDetail = () => {
   useEffect(() => {
     if (id) fetchAllData();
   }, [id]);
+
+  useEffect(() => {
+    if (!loading && !request && id) navigate('/requests', { replace: true });
+  }, [loading, request, id, navigate]);
 
   const fetchAllData = async () => {
     try {
@@ -126,15 +131,20 @@ const RequestDetail = () => {
         case 'receive':
           await requestsAPI.markReceived(id!);
           break;
-        case 'delivering':
+        case 'delivering': {
+          let attachmentUrl: string | null = null;
+          if (deliveringAttachmentFile) attachmentUrl = await requestsAPI.uploadDeliveryAttachment(id!, deliveringAttachmentFile);
           await requestsAPI.markDelivering(id!, {
             bid_winner_supplier_id: deliveringBidWinnerId || null,
-            delivery_notes: deliveringNotes.trim() || null
+            delivery_notes: deliveringNotes.trim() || null,
+            delivery_attachment_url: attachmentUrl
           });
           setShowDeliveringModal(false);
           setDeliveringBidWinnerId('');
           setDeliveringNotes('');
+          setDeliveringAttachmentFile(null);
           break;
+        }
         case 'complete':
           await requestsAPI.markCompleted(id!);
           break;
@@ -225,18 +235,7 @@ const RequestDetail = () => {
   }
 
   if (!request) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <Package className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-wmsu-black">Request not found</h2>
-          <p className="text-slate-500 mt-1">This request may have been deleted or you don't have access.</p>
-          <Link to="/requests" className="mt-4 inline-block text-red-900 hover:text-red-800 font-medium">
-            ← Back to requests
-          </Link>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -447,8 +446,8 @@ const RequestDetail = () => {
               </div>
             )}
 
-            {/* Delivery confirmation (bid winner + details – faculty sees when status is Delivering/Received) */}
-            {request.status === 'Received' && (request.bid_winner_supplier || request.delivery_notes) && (
+            {/* Delivery confirmation (bid winner + details + attachment – faculty sees when status is Delivering/Received) */}
+            {request.status === 'Received' && (request.bid_winner_supplier || request.delivery_notes || request.delivery_attachment_url) && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <Award className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -462,6 +461,13 @@ const RequestDetail = () => {
                     )}
                     {request.delivery_notes && (
                       <p className="text-blue-700 mt-2 whitespace-pre-wrap">{request.delivery_notes}</p>
+                    )}
+                    {request.delivery_attachment_url && (
+                      <p className="mt-2">
+                        <a href={request.delivery_attachment_url} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline font-medium">
+                          View attachment
+                        </a>
+                      </p>
                     )}
                     {!canApprove() && request.requester_id === profile?.id && (
                       <p className="text-sm text-blue-600 mt-2">Once you receive the supplies, click &quot;Confirm I received the supplies&quot; above to complete the request.</p>
@@ -939,9 +945,26 @@ const RequestDetail = () => {
                   rows={4}
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Attachment (optional)</label>
+                <label className="flex flex-col gap-2 cursor-pointer group">
+                  <span className="inline-flex items-center gap-2 px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-sm font-medium transition-all duration-200 cursor-pointer group-hover:bg-red-50 group-hover:border-red-200 group-hover:text-red-900 group-hover:shadow-sm min-w-0 max-w-full truncate" title={deliveringAttachmentFile?.name}>
+                    {deliveringAttachmentFile?.name ?? 'Choose file'}
+                  </span>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setDeliveringAttachmentFile(e.target.files?.[0] ?? null)}
+                    className="sr-only"
+                  />
+                  {!deliveringAttachmentFile && (
+                    <p className="text-xs text-slate-400">PDF, DOC, JPG, PNG (optional)</p>
+                  )}
+                </label>
+              </div>
             </div>
             <div className="px-6 py-4 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
-              <button onClick={() => setShowDeliveringModal(false)} className="px-4 py-2 text-slate-600 hover:text-wmsu-black font-medium">Cancel</button>
+              <button onClick={() => { setShowDeliveringModal(false); setDeliveringAttachmentFile(null); }} className="px-4 py-2 text-slate-600 hover:text-wmsu-black font-medium">Cancel</button>
               <button
                 onClick={() => handleAction('delivering')}
                 disabled={actionLoading}

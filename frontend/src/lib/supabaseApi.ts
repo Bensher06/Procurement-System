@@ -521,6 +521,23 @@ export const requestsAPI = {
     return data || [];
   },
 
+  /** Requests that need admin action: Pending, Approved, Gathering supplies (Ordered), Delivering (Received). Keeps approved requests on the page with progress buttons. */
+  getApprovalsQueue: async (): Promise<RequestWithRelations[]> => {
+    const { data, error } = await supabase
+      .from('requests')
+      .select(`
+        *,
+        requester:profiles!requester_id(*),
+        category:categories(*),
+        supplier:suppliers!supplier_id(*)
+      `)
+      .in('status', ['Pending', 'Approved', 'Ordered', 'Received'])
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
   getById: async (id: string): Promise<RequestWithRelations | null> => {
     const { data, error } = await supabase
       .from('requests')
@@ -640,13 +657,24 @@ export const requestsAPI = {
     });
   },
 
-  markDelivering: async (id: string, payload: { bid_winner_supplier_id?: string | null; delivery_notes?: string | null }): Promise<Request> => {
+  markDelivering: async (id: string, payload: { bid_winner_supplier_id?: string | null; delivery_notes?: string | null; delivery_attachment_url?: string | null }): Promise<Request> => {
     return requestsAPI.update(id, { 
       status: 'Received',
       received_at: new Date().toISOString(),
       bid_winner_supplier_id: payload.bid_winner_supplier_id ?? null,
-      delivery_notes: payload.delivery_notes ?? null
+      delivery_notes: payload.delivery_notes ?? null,
+      delivery_attachment_url: payload.delivery_attachment_url ?? null
     });
+  },
+
+  /** Upload optional attachment when marking as Delivering. Uses bucket procurement-documents path delivery-attachments/{requestId}/... */
+  uploadDeliveryAttachment: async (requestId: string, file: File): Promise<string> => {
+    const ext = file.name.split('.').pop() || 'bin';
+    const path = `delivery-attachments/${requestId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { data, error } = await supabase.storage.from('procurement-documents').upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('procurement-documents').getPublicUrl(data.path);
+    return urlData.publicUrl;
   },
 
   markCompleted: async (id: string): Promise<Request> => {
@@ -781,20 +809,35 @@ export const dashboardAPI = {
     // Get request counts by status
     let requestsQuery = supabase
       .from('requests')
-      .select('status');
+      .select('status, created_at');
 
     if (!isAdminOrDeptHead) {
       requestsQuery = requestsQuery.eq('requester_id', user.id);
     }
 
     const { data: requestsData } = await requestsQuery;
-    
+
     const requestsByStatus: Record<string, number> = {};
-    requestsData?.forEach(r => {
-      const status = r.status;
-      const key = status ? status.charAt(0).toUpperCase() + (status.slice(1) || '').toLowerCase() : status;
-      requestsByStatus[key] = (requestsByStatus[key] || 0) + 1;
-    });
+    if (isAdminOrDeptHead) {
+      requestsData?.forEach(r => {
+        const status = r.status;
+        const key = status ? status.charAt(0).toUpperCase() + (status.slice(1) || '').toLowerCase() : status;
+        requestsByStatus[key] = (requestsByStatus[key] || 0) + 1;
+      });
+    } else {
+      // Faculty: only one request at a time in progress; pipeline shows only that current request
+      const inProgressStatuses = ['Draft', 'Pending', 'Negotiating'];
+      const sorted = (requestsData || []).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const currentRequest = sorted.find(r =>
+        inProgressStatuses.includes(r.status)
+      ) ?? sorted[0];
+      if (currentRequest?.status) {
+        const key = currentRequest.status.charAt(0).toUpperCase() + (currentRequest.status.slice(1) || '').toLowerCase();
+        requestsByStatus[key] = 1;
+      }
+    }
 
     // Get monthly spending
     const startOfMonth = new Date();
@@ -812,22 +855,34 @@ export const dashboardAPI = {
     const { data: monthlyData } = await monthlyQuery;
     const monthlySpending = monthlyData?.reduce((sum, r) => sum + (r.total_price || 0), 0) || 0;
 
-    // Get recent requests
-    let recentQuery = supabase
-      .from('requests')
-      .select(`
-        *,
-        requester:profiles!requester_id(full_name),
-        category:categories(name)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (!isAdminOrDeptHead) {
-      recentQuery = recentQuery.eq('requester_id', user.id);
+    // Get recent requests (for faculty: only the single current request)
+    let recentRequests: any[] = [];
+    if (isAdminOrDeptHead) {
+      const { data } = await supabase
+        .from('requests')
+        .select(`
+          *,
+          requester:profiles!requester_id(full_name),
+          category:categories(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      recentRequests = data || [];
+    } else {
+      const { data: myRequests } = await supabase
+        .from('requests')
+        .select(`
+          *,
+          requester:profiles!requester_id(full_name),
+          category:categories(name)
+        `)
+        .eq('requester_id', user.id)
+        .order('created_at', { ascending: false });
+      const inProgressStatuses = ['Draft', 'Pending', 'Negotiating'];
+      const current = (myRequests || []).find(r => inProgressStatuses.includes(r.status))
+        ?? (myRequests || [])[0];
+      recentRequests = current ? [current] : [];
     }
-
-    const { data: recentRequests } = await recentQuery;
 
     // Get total requests count
     let totalQuery = supabase

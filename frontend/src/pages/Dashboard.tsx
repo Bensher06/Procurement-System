@@ -212,18 +212,31 @@ className="mt-3 text-sm text-gray-700 hover:text-gray-900 inline-flex items-cent
           <div className="flex flex-wrap items-end gap-2 sm:gap-0 sm:flex-nowrap sm:justify-between">
             {REQUEST_PROGRESS_STAGES.map((stage, index) => {
               const count = stats?.requestsByStatus?.[stage.key] || 0;
+              const isCurrent = count > 0;
               return (
                 <div key={stage.key} className="flex flex-col items-center flex-1 min-w-[4rem]">
                   <div className="flex items-center gap-0.5 w-full justify-center">
                     {index > 0 && (
                       <div className="hidden sm:block flex-1 h-0.5 bg-gray-200 -mr-px max-w-[20px]" style={{ minWidth: 8 }} />
                     )}
-                    <div className="flex flex-col items-center">
-                      <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-gray-600">{count}</span>
+                    <Link
+                      to={`/requests?status=${encodeURIComponent(stage.key)}`}
+                      className="flex flex-col items-center cursor-pointer group transition-colors rounded-lg p-1 -m-1 hover:bg-gray-50"
+                      title={`View ${stage.label} requests`}
+                    >
+                      <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        isCurrent
+                          ? 'bg-green-500 border-green-600 text-white group-hover:bg-green-600'
+                          : 'bg-gray-100 border-gray-200 group-hover:bg-gray-200 group-hover:border-gray-300'
+                      }`}>
+                        <span className={`text-xs font-semibold ${isCurrent ? 'text-white' : 'text-gray-600'}`}>
+                          {count}
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-600 mt-1 text-center leading-tight">{stage.label}</span>
-                    </div>
+                      <span className={`text-xs mt-1 text-center leading-tight ${isCurrent ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                        {stage.label}
+                      </span>
+                    </Link>
                     {index < REQUEST_PROGRESS_STAGES.length - 1 && (
                       <div className="hidden sm:block flex-1 h-0.5 bg-gray-200 -ml-px max-w-[20px]" style={{ minWidth: 8 }} />
                     )}
@@ -233,10 +246,14 @@ className="mt-3 text-sm text-gray-700 hover:text-gray-900 inline-flex items-cent
             })}
           </div>
           {(stats?.requestsByStatus?.Rejected ?? 0) > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
+            <Link
+              to="/requests?status=Rejected"
+              className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 w-fit hover:opacity-80 transition-opacity cursor-pointer"
+              title="View rejected requests"
+            >
               <StatusBadge status="Rejected" size="sm" />
               <span className="text-sm text-gray-600">{stats?.requestsByStatus?.Rejected} rejected</span>
-            </div>
+            </Link>
           )}
         </div>
       )}
