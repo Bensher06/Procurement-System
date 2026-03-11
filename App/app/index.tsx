@@ -16,7 +16,7 @@ export default function AuthGate() {
 
     const checkSession = async (session: { user: { id: string } } | null) => {
       if (!session?.user?.id) {
-        router.replace('/login');
+        router.replace('/landing');
         return;
       }
       const { data: profile } = await supabase
@@ -41,7 +41,7 @@ export default function AuthGate() {
       if (session) {
         await checkSession(session);
       } else {
-        router.replace('/login');
+        router.replace('/landing');
       }
     };
 
@@ -51,7 +51,7 @@ export default function AuthGate() {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
       if (session) await checkSession(session);
-      else router.replace('/login');
+      else router.replace('/landing');
     });
 
     return () => {

@@ -35,7 +35,11 @@ export default function HomeScreen() {
         return;
       }
       const data = await requestsAPI.getMyRequests();
-      setRequests(data.filter((r) => r.status !== 'Completed' && r.status !== 'Rejected'));
+      const status = (s: string | undefined) => (s || '').trim();
+      const inProgress = data.filter(
+        (r) => status(r.status).toLowerCase() !== 'completed' && status(r.status).toLowerCase() !== 'rejected'
+      );
+      setRequests(inProgress);
       setError(null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load requests');
@@ -49,6 +53,15 @@ export default function HomeScreen() {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  // Auto-refresh every 10s so progress stays current
+  useEffect(() => {
+    if (!signedIn) return;
+    const interval = setInterval(() => {
+      loadRequests();
+    }, 10_000);
+    return () => clearInterval(interval);
+  }, [signedIn]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -117,6 +130,9 @@ export default function HomeScreen() {
         <ThemedView style={styles.centerBox}>
           <ThemedText type="subtitle">No requests in progress</ThemedText>
           <ThemedText style={styles.hint}>Completed and rejected requests appear in Request history.</ThemedText>
+          <Pressable onPress={() => { setLoading(true); loadRequests(); }} style={styles.retryButton}>
+            <Text style={[styles.retryText, { color: c.tint }]}>Refresh</Text>
+          </Pressable>
         </ThemedView>
       ) : (
         <View style={styles.listContent}>

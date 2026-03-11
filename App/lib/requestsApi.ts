@@ -15,7 +15,7 @@ export const requestsAPI = {
         *,
         requester:profiles!requester_id(full_name, email),
         category:categories(name),
-        vendor:vendors(name)
+        supplier:suppliers!supplier_id(name)
       `
       )
       .eq('requester_id', user.id)

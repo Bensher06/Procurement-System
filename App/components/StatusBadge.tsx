@@ -7,6 +7,7 @@ const statusColors: Record<
 > = {
   Draft: { bg: '#E2E8F0', text: '#475569' },
   Pending: { bg: '#FEF3C7', text: '#B45309' },
+  Negotiating: { bg: '#FEF9C3', text: '#A16207' },
   Approved: { bg: '#D1FAE5', text: '#047857' },
   Rejected: { bg: '#FEE2E2', text: '#B91C1C' },
   Ordered: { bg: '#EDE9FE', text: '#6D28D9' },
@@ -18,11 +19,15 @@ interface StatusBadgeProps {
   status: RequestStatus | string;
 }
 
+const normalizedStatus = (s: string) =>
+  (s || '').trim().toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusColors[status as RequestStatus] ?? statusColors.Draft;
+  const key = normalizedStatus(status) as RequestStatus;
+  const config = statusColors[key] ?? statusColors.Draft;
   return (
     <View style={[styles.badge, { backgroundColor: config.bg }]}>
-      <Text style={[styles.text, { color: config.text }]}>{status}</Text>
+      <Text style={[styles.text, { color: config.text }]}>{key || status}</Text>
     </View>
   );
 }

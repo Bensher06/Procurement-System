@@ -35,7 +35,8 @@ export default function RequestHistoryScreen() {
         return;
       }
       const data = await requestsAPI.getMyRequests();
-      setRequests(data.filter((r) => r.status === 'Completed' || r.status === 'Rejected'));
+      const status = (s: string | undefined) => (s || '').trim().toLowerCase();
+      setRequests(data.filter((r) => status(r.status) === 'completed' || status(r.status) === 'rejected'));
       setError(null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load request history');

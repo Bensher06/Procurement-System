@@ -4,6 +4,7 @@
 export type RequestStatus =
   | 'Draft'
   | 'Pending'
+  | 'Negotiating'
   | 'Approved'
   | 'Rejected'
   | 'Ordered'
@@ -14,7 +15,7 @@ export interface Request {
   id: string;
   requester_id: string;
   category_id: string | null;
-  vendor_id: string | null;
+  supplier_id: string | null;
   item_name: string;
   description: string | null;
   quantity: number;
@@ -34,5 +35,5 @@ export interface Request {
 export interface RequestWithRelations extends Request {
   requester?: { full_name?: string; email?: string };
   category?: { name?: string };
-  vendor?: { name?: string };
+  supplier?: { name?: string };
 }

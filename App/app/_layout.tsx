@@ -46,6 +46,12 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? WMSUDarkTheme : WMSULightTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="landing" options={{ title: 'WMSU-Procurement' }} />
+        <Stack.Screen name="active-bidding" options={{ title: 'Active Bidding' }} />
+        <Stack.Screen name="bid-bulletins" options={{ title: 'Bid Bulletins' }} />
+        <Stack.Screen name="annual-procurement-plan" options={{ title: 'APP' }} />
+        <Stack.Screen name="bid-winners-awardees" options={{ title: 'Bid Winners & Awardees' }} />
+        <Stack.Screen name="accreditation-portal" options={{ title: 'Accreditation Portal' }} />
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
