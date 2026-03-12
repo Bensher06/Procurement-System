@@ -12,9 +12,16 @@ import {
   Search,
   X,
   CheckCircle,
-  AlertCircle,
-  Lock
+  Lock,
+  Building2
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
+
+const DEPARTMENTS = [
+  'College of Computing Science',
+  'College of Nursing',
+  'College of Engineering'
+] as const;
 
 const Users = () => {
   const [users, setUsers] = useState<Profile[]>([]);
@@ -30,6 +37,7 @@ const Users = () => {
     email: '',
     password: '',
     role: 'Faculty' as UserRole,
+    department: '' as string,
     approved_budget: '' as string
   });
 
@@ -48,35 +56,58 @@ const Users = () => {
     }
   };
 
+  const departmentAlreadyTaken = (department: string, excludeUserId?: string) => {
+    if (!department) return false;
+    return users.some(u => u.department === department && u.id !== excludeUserId);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setSubmitting(true);
-    
+
     try {
       if (editingUser) {
-        // Update existing user
+        if (formData.department && departmentAlreadyTaken(formData.department, editingUser.id)) {
+          setError('This department already has a user. Each department can only have one user.');
+          setSubmitting(false);
+          return;
+        }
         await profilesAPI.update(editingUser.id, {
           full_name: formData.full_name,
           role: formData.role,
+          department: formData.department || null,
           approved_budget: formData.approved_budget === '' ? null : parseFloat(formData.approved_budget)
         });
         setSuccess('User updated successfully');
       } else {
-        // Create new user
         if (!formData.password || formData.password.length < 6) {
           setError('Password must be at least 6 characters long');
           setSubmitting(false);
           return;
         }
-        
-        await authAPI.signUp(
+        if (!formData.department) {
+          setError('Please select a department.');
+          setSubmitting(false);
+          return;
+        }
+        if (departmentAlreadyTaken(formData.department)) {
+          setError('This department already has a user. Admin can only create one user per department.');
+          setSubmitting(false);
+          return;
+        }
+
+        const data = await authAPI.signUp(
           formData.email,
           formData.password,
           formData.full_name,
-          formData.role
+          formData.role,
+          formData.department
         );
+        if (data?.user?.id) {
+          await profilesAPI.update(data.user.id, { department: formData.department });
+        }
         setSuccess('User created successfully. They can now sign in with their email and password.');
       }
       setShowModal(false);
@@ -102,6 +133,7 @@ const Users = () => {
       email: user.email,
       password: '',
       role: user.role,
+      department: user.department || '',
       approved_budget: user.approved_budget != null ? String(user.approved_budget) : ''
     });
     setShowModal(true);
@@ -131,7 +163,7 @@ const Users = () => {
   };
 
   const resetForm = () => {
-    setFormData({ full_name: '', email: '', password: '', role: 'Faculty', approved_budget: '' });
+    setFormData({ full_name: '', email: '', password: '', role: 'Faculty', department: '', approved_budget: '' });
     setEditingUser(null);
   };
 
@@ -172,21 +204,7 @@ const Users = () => {
         </button>
       </div>
 
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 text-green-700">
-          <CheckCircle className="w-5 h-5" />
-          <span>{success}</span>
-          <button onClick={() => setSuccess('')} className="ml-auto">×</button>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-700">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-auto">×</button>
-        </div>
-      )}
+      <CenteredAlert error={error || undefined} success={success || undefined} onClose={() => { setError(''); setSuccess(''); }} />
 
       {/* Search */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -209,6 +227,7 @@ const Users = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">User</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Department</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Created</th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
             </tr>
@@ -233,6 +252,9 @@ const Users = () => {
                   <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
                     {user.role}
                   </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {user.department || '—'}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
                   {new Date(user.created_at).toLocaleDateString()}
@@ -382,9 +404,31 @@ const Users = () => {
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600"
                 >
                   <option value="Faculty">Faculty</option>
-                  <option value="DeptHead">Department Head</option>
                   <option value="Admin">Admin</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Building2 className="w-4 h-4 inline mr-2" />
+                  Department
+                </label>
+                <select
+                  value={formData.department}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600"
+                  required={!editingUser}
+                >
+                  <option value="">Select department</option>
+                  {DEPARTMENTS.map((d) => (
+                    <option key={d} value={d} disabled={!!editingUser && departmentAlreadyTaken(d, editingUser?.id)}>
+                      {d}{departmentAlreadyTaken(d, editingUser?.id) ? ' (already has a user)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Each department can only have one user. Disabled options are already assigned.
+                </p>
               </div>
 
               {editingUser && (

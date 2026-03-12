@@ -31,8 +31,6 @@ const getAnonClient = () => {
 import {
   Mail,
   Loader2,
-  AlertCircle,
-  CheckCircle,
   Building2,
   User,
   Phone,
@@ -42,6 +40,7 @@ import {
   FileText,
   Hash
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const BUSINESS_TYPES = [
   '',
@@ -289,7 +288,8 @@ const SupplierRegister = () => {
         tin_number: formData.tin_number || null,
         business_registration_no: formData.business_registration_no || null,
         business_type: formData.business_type || null,
-        // project_attending and portfolio_urls omitted until columns exist in Supabase; see docs/supabase-suppliers-migration.md
+        portfolio_urls: portfolioUrls.length > 0 ? portfolioUrls : null,
+        // project_attending omitted until column exists; see docs/supabase-suppliers-migration.md
       };
 
       const { error: err } = await anonClient
@@ -328,8 +328,15 @@ const SupplierRegister = () => {
     }
   };
 
+  const successMessage = 'Profile submitted. Your supplier profile has been sent to the procurement team. They will review it and respond to you at the email you provided.';
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <CenteredAlert
+        error={error || undefined}
+        success={success ? successMessage : undefined}
+        onClose={() => { setError(''); setSuccess(false); }}
+      />
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <Link to="/landing" className="inline-block">
@@ -345,25 +352,6 @@ const SupplierRegister = () => {
           <p className="text-sm text-gray-600 text-center mb-6">
             Submit your company profile to participate in WMSU procurement. This is not a user account—you will receive our response at the email you provide.
           </p>
-
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-3 text-green-700 mb-2">
-                <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="font-semibold">Profile submitted</span>
-              </div>
-              <p className="text-sm text-green-700">
-                Your supplier profile has been sent to the procurement team. They will review it and respond to you at the email you provided.
-              </p>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Company Logo - required */}

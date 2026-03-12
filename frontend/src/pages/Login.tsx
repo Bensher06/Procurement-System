@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../lib/supabaseApi';
-import { Mail, Lock, Loader2, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Mail, Lock, Loader2, CheckCircle, X } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -54,6 +55,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <CenteredAlert error={error || undefined} success={undefined} onClose={() => setError('')} />
       <div className="w-full max-w-md">
         {/* Logo Card */}
         <div className="text-center mb-8">
@@ -76,13 +78,6 @@ const Login = () => {
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
             Welcome Back
           </h2>
-
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

@@ -13,6 +13,7 @@ import {
   XCircle,
   ShieldCheck
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const AccreditationPortal = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -46,16 +47,9 @@ const AccreditationPortal = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-red-700">
-        {error}
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
+      <CenteredAlert error={error || undefined} success={undefined} onClose={() => setError('')} />
       {/* Public header */}
       <nav className="bg-red-900 border-b border-red-800 px-4 sm:px-6 py-3 flex items-center justify-between">
         <Link to="/landing" className="flex items-center gap-2">

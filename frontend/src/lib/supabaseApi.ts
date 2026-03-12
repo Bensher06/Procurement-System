@@ -24,14 +24,15 @@ import type {
 // =====================================================
 export const authAPI = {
   // Sign up with email and password
-  signUp: async (email: string, password: string, fullName: string, role: string = 'Faculty') => {
+  signUp: async (email: string, password: string, fullName: string, role: string = 'Faculty', department?: string | null) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          role: role
+          role: role,
+          ...(department != null && department !== '' ? { department } : {})
         }
       }
     });

@@ -5,6 +5,7 @@ import { requestsAPI } from '../lib/supabaseApi';
 import StatusBadge from '../components/StatusBadge';
 import type { RequestWithRelations } from '../types/database';
 import { Loader2, Eye, Calendar, Package, User } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const History = () => {
   const { canApprove } = useAuth();
@@ -50,11 +51,7 @@ const History = () => {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error}
-        </div>
-      )}
+      <CenteredAlert error={error || undefined} success={undefined} onClose={() => setError('')} />
 
       {requests.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">

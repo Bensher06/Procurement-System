@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../lib/supabaseApi';
 import StatusBadge from '../components/StatusBadge';
 import { CircleDot, Loader2, FileText, Wallet, RefreshCw, ChevronRight } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const REQUEST_PROGRESS_STAGES: { key: string; label: string }[] = [
   { key: 'Draft', label: 'Draft' },
@@ -84,21 +85,11 @@ const RequestProgress = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 space-y-3">
-        <p>{error}</p>
-        <button type="button" onClick={() => fetchStats()} className="px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-red-800 text-sm font-medium">
-          Try again
-        </button>
-      </div>
-    );
-  }
-
   const approvedBudget = profile?.approved_budget != null ? Number(profile.approved_budget) : null;
 
   return (
     <div className="space-y-6">
+      <CenteredAlert error={error || undefined} success={undefined} onClose={() => { setError(''); fetchStats(); }} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-wmsu-black flex items-center gap-2">

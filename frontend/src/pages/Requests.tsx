@@ -12,9 +12,9 @@ import {
   Eye,
   Trash2,
   Send,
-  CheckCircle,
-  AlertCircle
+  CheckCircle
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const Requests = () => {
   const { profile } = useAuth();
@@ -112,22 +112,7 @@ const Requests = () => {
         </Link>
       </div>
 
-      {/* Alerts */}
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 text-green-700">
-          <CheckCircle className="w-5 h-5" />
-          <span>{success}</span>
-          <button onClick={() => setSuccess('')} className="ml-auto text-green-500 hover:text-green-700">×</button>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-700">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-auto text-red-500 hover:text-red-700">×</button>
-        </div>
-      )}
+      <CenteredAlert error={error || undefined} success={success || undefined} onClose={() => { setError(''); setSuccess(''); }} />
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">

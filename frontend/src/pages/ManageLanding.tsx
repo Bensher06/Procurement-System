@@ -29,6 +29,7 @@ import {
   ArrowLeft,
   Pencil
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const defaultFeaturedItem: TransparencyFeaturedItem = {
   projectTitle: '',
@@ -142,17 +143,11 @@ export default function ManageLanding() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <CenteredAlert error={error || undefined} success={success || undefined} onClose={() => { setError(''); setSuccess(''); }} />
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-wmsu-black">Manage Landing Page</h1>
         <p className="text-base text-gray-500 mt-1">Edit content shown on the public landing page.</p>
       </div>
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>
-      )}
 
       <div className="flex flex-wrap gap-2 mb-6">
         {sections.map(({ key, label, icon: Icon }) => (

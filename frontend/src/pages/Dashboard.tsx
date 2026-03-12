@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   CircleDot
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const REQUEST_PROGRESS_STAGES: { key: string; label: string }[] = [
   { key: 'Draft', label: 'Draft' },
@@ -75,9 +76,22 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        {error}
-      </div>
+      <>
+        <CenteredAlert
+          error={error}
+          success={undefined}
+          onClose={() => setError('')}
+        />
+        <div className="flex items-center justify-center h-64">
+          <button
+            type="button"
+            onClick={() => { setError(''); fetchStats(); }}
+            className="px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-red-800"
+          >
+            Retry
+          </button>
+        </div>
+      </>
     );
   }
 

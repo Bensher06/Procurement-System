@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { CenteredAlert } from '@/components/CenteredAlert';
 import { StatusBadge } from '@/components/StatusBadge';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
@@ -97,19 +98,18 @@ export default function RequestHistoryScreen() {
         <ThemedText style={styles.subtitle}>Completed and rejected requests</ThemedText>
       </ThemedView>
 
+      <CenteredAlert
+        visible={!!error}
+        message={error || ''}
+        type="error"
+        onClose={() => setError(null)}
+        actionLabel="Retry"
+        onAction={onRefresh}
+      />
       {loading ? (
         <ThemedView style={styles.centerBox}>
           <ActivityIndicator size="large" color={c.tint} />
           <ThemedText style={styles.loadingText}>Loading history…</ThemedText>
-        </ThemedView>
-      ) : error ? (
-        <ThemedView style={[styles.errorBox, { backgroundColor: colorScheme === 'dark' ? '#2a1a1a' : '#FEE2E2' }]}>
-          <ThemedText style={[styles.errorText, { color: colorScheme === 'dark' ? '#FCA5A5' : '#B91C1C' }]}>
-            {error}
-          </ThemedText>
-          <Pressable onPress={onRefresh} style={styles.retryButton}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
         </ThemedView>
       ) : requests.length === 0 ? (
         <ThemedView style={styles.centerBox}>

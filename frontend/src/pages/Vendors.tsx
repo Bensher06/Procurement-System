@@ -19,6 +19,7 @@ import {
   FileText,
   ExternalLink
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const Vendors = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -126,28 +127,17 @@ const Vendors = () => {
 
   return (
     <div className="space-y-6">
+      <CenteredAlert
+        error={error || undefined}
+        success={success || undefined}
+        onClose={() => { setError(''); setSuccess(''); }}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-wmsu-black">Suppliers</h1>
           <p className="text-base text-gray-500 mt-1">View and manage supplier qualifications</p>
         </div>
       </div>
-
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 text-green-700">
-          <CheckCircle className="w-5 h-5" />
-          <span>{success}</span>
-          <button onClick={() => setSuccess('')} className="ml-auto">×</button>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-700">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-auto">×</button>
-        </div>
-      )}
 
       {/* Search */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">

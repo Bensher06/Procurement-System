@@ -35,6 +35,7 @@ import {
   Mail,
   MapPin
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const RequestDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -369,18 +370,7 @@ const RequestDetail = () => {
         </div>
       </div>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="max-w-7xl mx-auto px-6 pt-4">
-          <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 flex items-center gap-3 text-rose-700">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-auto">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <CenteredAlert error={error || undefined} success={undefined} onClose={() => setError('')} />
 
       {/* Main Content - Split Screen Layout */}
       <div className="max-w-7xl mx-auto px-6 py-6">

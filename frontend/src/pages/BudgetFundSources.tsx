@@ -9,9 +9,9 @@ import {
   FileText,
   Plus,
   ArrowLeft,
-  CheckCircle,
-  AlertCircle
+  CheckCircle
 } from 'lucide-react';
+import { CenteredAlert } from '../components/CenteredAlert';
 
 const BudgetFundSources = () => {
   const { budgetId } = useParams<{ budgetId: string }>();
@@ -123,21 +123,7 @@ const BudgetFundSources = () => {
         </div>
       </div>
 
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3 text-green-700">
-          <CheckCircle className="w-5 h-5" />
-          <span>{success}</span>
-          <button onClick={() => setSuccess('')} className="ml-auto">×</button>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-700">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-auto">×</button>
-        </div>
-      )}
+      <CenteredAlert error={error || undefined} success={success || undefined} onClose={() => { setError(''); setSuccess(''); }} />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
         {fundSources.length === 0 ? (

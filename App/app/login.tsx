@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { supabase } from '@/lib/supabase';
+import { CenteredAlert } from '@/components/CenteredAlert';
 import { WMSU, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -128,15 +129,14 @@ export default function LoginScreen() {
         </View>
 
         {/* Auth card – match web */}
+        <CenteredAlert
+          visible={!!error}
+          message={error}
+          type="error"
+          onClose={() => setError('')}
+        />
         <View style={[styles.card, { backgroundColor: cardBg, shadowColor: '#000' }]}>
           <Text style={[styles.welcomeTitle, { color: textPrimary }]}>Welcome Back</Text>
-
-          {error ? (
-            <View style={styles.errorBox}>
-              <MaterialIcons name="error-outline" size={20} color="#B91C1C" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
 
           <View style={styles.inputWrap}>
             <Text style={[styles.label, { color: textPrimary }]}>Email Address</Text>

@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { CenteredAlert } from '@/components/CenteredAlert';
 import { WMSU } from '@/constants/theme';
 import { suppliersAPI } from '@/lib/suppliersApi';
 import type { Supplier } from '@/types/suppliers';
@@ -38,6 +39,14 @@ export default function AccreditationPortalScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isLight ? '#F9FAFB' : '#1A1A1A' }]} edges={['top']}>
+      <CenteredAlert
+        visible={!!error}
+        message={error}
+        type="error"
+        onClose={() => setError('')}
+        actionLabel="Retry"
+        onAction={() => { setError(''); setLoading(true); suppliersAPI.getAll().then(setSuppliers).catch((e) => setError(e?.message || 'Failed to load')).finally(() => setLoading(false)); }}
+      />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
@@ -61,11 +70,7 @@ export default function AccreditationPortalScreen() {
           </View>
         </View>
 
-        {error ? (
-          <View style={[styles.errorBox, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : loading ? (
+        {loading ? (
           <ActivityIndicator size="large" color={WMSU.red} style={styles.loader} />
         ) : (
           <>
